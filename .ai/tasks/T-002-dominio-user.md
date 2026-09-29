@@ -22,9 +22,9 @@ Modelar o usuário com as invariantes protegidas no domínio, sem dependência d
 - Persistência, endpoints, JWT.
 
 ## Notas / decisões tomadas durante a tarefa
--  recebe um  como 5º parâmetro, para o  ser testável ( nos testes).
-- Email virou value object  (record: igualdade por valor, máx. 254 caracteres, exige domínio com ponto).
+- `Register` recebe um `TimeProvider` como 5º parâmetro, para o `CreatedAt` ser testável (`FakeTimeProvider` nos testes).
+- Email virou value object `Email` (record: igualdade por valor, máx. 254 caracteres, exige domínio com ponto).
 - Regras extras além do pedido: nome com no máximo 100 caracteres; hash de senha obrigatório.
--  começa em 1 (Buyer=1, Seller=2), para 0 nunca ser um papel válido por acidente.
--  tem  e  (o Verify será usado no login, T-004).
+- `UserRole` começa em 1 (Buyer=1, Seller=2), para 0 nunca ser um papel válido por acidente.
+- `IPasswordHasher` tem `Hash` e `Verify` (o `Verify` será usado no login, T-004).
 - 20 testes unitários (EmailTests, UserTests).
