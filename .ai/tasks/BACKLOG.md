@@ -15,7 +15,7 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 |---|---|---|---|---|
 | T-002 | Domínio `User` (email válido, papel Buyer/Seller, hash de senha) | Users | T-001 | done |
 | T-003 | `POST /users` (cadastro) com EF Core + migration + teste de integração com Testcontainers | Users | T-002 | done |
-| T-004 | `POST /auth/login` → JWT; lib de validação JWT compartilhada entre os serviços | Users | T-003 | done |
+| T-004 | `POST /auth/login` → JWT; lib de validação JWT compartilhada entre os serviços | Users | T-003 | todo |
 
 ## Fase 2 — Produto
 | ID | Tarefa | Serviço | Depende | Status |
