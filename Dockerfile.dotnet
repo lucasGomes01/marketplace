@@ -1,0 +1,16 @@
+# Dockerfile genérico para os serviços .NET.
+# Uso: docker build -f Dockerfile.dotnet --build-arg PROJECT=src/services/Users/Users.Api --build-arg ASSEMBLY=Users.Api .
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG PROJECT
+WORKDIR /src
+COPY . .
+RUN dotnet publish "$PROJECT" -c Release -o /app
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+ARG ASSEMBLY
+ENV APP_DLL=${ASSEMBLY}.dll \
+    ASPNETCORE_HTTP_PORTS=8080
+WORKDIR /app
+COPY --from=build /app .
+EXPOSE 8080
+ENTRYPOINT ["sh", "-c", "exec dotnet \"$APP_DLL\""]

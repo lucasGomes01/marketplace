@@ -1,0 +1,84 @@
+# Infra sobe por padrão:        docker compose up -d
+# Infra + todos os serviços:    docker compose --profile apps up -d --build
+name: marketplace
+
+x-dotnet-service: &dotnet-service
+  profiles: [apps]
+  environment: &dotnet-env
+    ASPNETCORE_ENVIRONMENT: Development
+    RabbitMq__Host: rabbitmq
+    RabbitMq__User: ${RABBITMQ_USER}
+    RabbitMq__Password: ${RABBITMQ_PASSWORD}
+  depends_on:
+    sqlserver: { condition: service_healthy }
+    rabbitmq: { condition: service_healthy }
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    ports: ["1433:1433"]
+    volumes: [sqlserver-data:/var/opt/mssql]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      retries: 10
+      start_period: 20s
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports: ["5672:5672", "15672:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      retries: 10
+
+  users:
+    <<: *dotnet-service
+    build: { context: ., dockerfile: Dockerfile.dotnet, args: { PROJECT: src/services/Users/Users.Api, ASSEMBLY: Users.Api } }
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__Default: Server=sqlserver;Database=UsersDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+
+  catalog:
+    <<: *dotnet-service
+    build: { context: ., dockerfile: Dockerfile.dotnet, args: { PROJECT: src/services/Catalog/Catalog.Api, ASSEMBLY: Catalog.Api } }
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__Default: Server=sqlserver;Database=CatalogDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+
+  cart:
+    <<: *dotnet-service
+    build: { context: ., dockerfile: Dockerfile.dotnet, args: { PROJECT: src/services/Cart/Cart.Api, ASSEMBLY: Cart.Api } }
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__Default: Server=sqlserver;Database=CartDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+
+  orders:
+    profiles: [apps]
+    build: ./src/services/Orders
+    environment:
+      ORDERS_DB_DSN: sqlserver://sa:${MSSQL_SA_PASSWORD}@sqlserver:1433?database=OrdersDb&TrustServerCertificate=true
+      ORDERS_AMQP_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+    depends_on:
+      sqlserver: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  gateway:
+    profiles: [apps]
+    build: { context: ., dockerfile: Dockerfile.dotnet, args: { PROJECT: src/gateway/Gateway, ASSEMBLY: Gateway } }
+    environment:
+      ReverseProxy__Clusters__users__Destinations__d1__Address: http://users:8080/
+      ReverseProxy__Clusters__catalog__Destinations__d1__Address: http://catalog:8080/
+      ReverseProxy__Clusters__cart__Destinations__d1__Address: http://cart:8080/
+      ReverseProxy__Clusters__orders__Destinations__d1__Address: http://orders:8080/
+    ports: ["5000:8080"]
+    depends_on: [users, catalog, cart, orders]
+
+volumes:
+  sqlserver-data:

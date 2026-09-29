@@ -1,0 +1,12 @@
+# Progresso
+
+> Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
+
+## 2026-09-29 — T-000 Fundação
+- Solution .NET 10 (`Marketplace.slnx`) com Users, Catalog, Cart (Api + Domain + UnitTests + IntegrationTests),
+  Gateway YARP e BuildingBlocks.Messaging. Health check + teste de fumaça em cada API (verdes).
+- Orders em Go (stdlib, `GET /health` + teste). **Go não está instalado na máquina do dev** — testar via
+  Docker ou instalar Go 1.26.
+- Front React + TS + Vite em `src/web` com proxy `/api` → gateway.
+- `docker-compose.yml` (infra por padrão, apps no profile `apps`), `Dockerfile.dotnet`, CI no GitHub Actions.
+- Pendente: validar `docker compose up` (Docker Desktop estava desligado).

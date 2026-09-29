@@ -1,0 +1,35 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/building-blocks/">
+    <Project Path="src/building-blocks/BuildingBlocks.Messaging/BuildingBlocks.Messaging.csproj" />
+  </Folder>
+  <Folder Name="/src/gateway/">
+    <Project Path="src/gateway/Gateway/Gateway.csproj" />
+  </Folder>
+  <Folder Name="/src/services/" />
+  <Folder Name="/src/services/Cart/">
+    <Project Path="src/services/Cart/Cart.Api/Cart.Api.csproj" />
+    <Project Path="src/services/Cart/Cart.Domain/Cart.Domain.csproj" />
+  </Folder>
+  <Folder Name="/src/services/Catalog/">
+    <Project Path="src/services/Catalog/Catalog.Api/Catalog.Api.csproj" />
+    <Project Path="src/services/Catalog/Catalog.Domain/Catalog.Domain.csproj" />
+  </Folder>
+  <Folder Name="/src/services/Users/">
+    <Project Path="src/services/Users/Users.Api/Users.Api.csproj" />
+    <Project Path="src/services/Users/Users.Domain/Users.Domain.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/Cart/">
+    <Project Path="tests/Cart/Cart.IntegrationTests/Cart.IntegrationTests.csproj" />
+    <Project Path="tests/Cart/Cart.UnitTests/Cart.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Catalog/">
+    <Project Path="tests/Catalog/Catalog.IntegrationTests/Catalog.IntegrationTests.csproj" />
+    <Project Path="tests/Catalog/Catalog.UnitTests/Catalog.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Users/">
+    <Project Path="tests/Users/Users.IntegrationTests/Users.IntegrationTests.csproj" />
+    <Project Path="tests/Users/Users.UnitTests/Users.UnitTests.csproj" />
+  </Folder>
+</Solution>
