@@ -2,6 +2,14 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-09-29 — T-002 Domínio User
+- `User.Register` + value object `Email` + `UserRole` + `IPasswordHasher` em `Users.Domain`; 20 testes unitários verdes.
+- `CreatedAt` vem de um `TimeProvider` injetado. Próxima: **T-003** (POST /users com EF Core + Testcontainers).
+
+## 2026-09-29 — T-001 Ambiente validado
+- Compose (infra + apps) ok; os 4 serviços respondem 200 via gateway. Go testado via `golang:1.26-alpine`.
+- Identidade git local e `.gitattributes` (LF). **Pendente com o humano: T-001b** (repo no GitHub + CI).
+
 ## 2026-09-29 — T-000 Fundação
 - Solution .NET 10 (`Marketplace.slnx`) com Users, Catalog, Cart (Api + Domain + UnitTests + IntegrationTests),
   Gateway YARP e BuildingBlocks.Messaging. Health check + teste de fumaça em cada API (verdes).

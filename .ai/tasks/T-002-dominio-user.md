@@ -2,17 +2,17 @@
 
 - **Serviço:** Users (`Users.Domain`, `Users.UnitTests`)
 - **Depende de:** T-001
-- **Status:** todo
+- **Status:** done
 
 ## Objetivo
 Modelar o usuário com as invariantes protegidas no domínio, sem dependência de banco.
 
 ## Critérios de aceite
-- [ ] `User.Register(email, name, role, passwordHash)` cria um usuário com `Id` (Guid v7) e `CreatedAt`.
-- [ ] O email é normalizado (trim + minúsculas) e validado; um email inválido lança `DomainException`.
-- [ ] Nome vazio ou só com espaços lança `DomainException`.
-- [ ] `Role` aceita apenas `Buyer` ou `Seller` (enum).
-- [ ] O domínio recebe a senha **já com hash**; o hashing fica numa interface `IPasswordHasher`
+- [x] `User.Register(email, name, role, passwordHash)` cria um usuário com `Id` (Guid v7) e `CreatedAt`.
+- [x] O email é normalizado (trim + minúsculas) e validado; um email inválido lança `DomainException`.
+- [x] Nome vazio ou só com espaços lança `DomainException`.
+- [x] `Role` aceita apenas `Buyer` ou `Seller` (enum).
+- [x] O domínio recebe a senha **já com hash**; o hashing fica numa interface `IPasswordHasher`
       (implementação com `PasswordHasher<T>` do ASP.NET Identity entra no T-003).
 
 ## Testes esperados
@@ -20,3 +20,11 @@ Modelar o usuário com as invariantes protegidas no domínio, sem dependência d
 
 ## Fora de escopo
 - Persistência, endpoints, JWT.
+
+## Notas / decisões tomadas durante a tarefa
+-  recebe um  como 5º parâmetro, para o  ser testável ( nos testes).
+- Email virou value object  (record: igualdade por valor, máx. 254 caracteres, exige domínio com ponto).
+- Regras extras além do pedido: nome com no máximo 100 caracteres; hash de senha obrigatório.
+-  começa em 1 (Buyer=1, Seller=2), para 0 nunca ser um papel válido por acidente.
+-  tem  e  (o Verify será usado no login, T-004).
+- 20 testes unitários (EmailTests, UserTests).
