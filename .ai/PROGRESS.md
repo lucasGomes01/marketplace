@@ -2,6 +2,11 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-09-29 — T-003 POST /users
+- Cadastro com EF Core + migration `InitialCreate` + 9 testes de integração com Testcontainers (SQL Server real).
+- Padrões de endpoint e de teste de integração documentados em `context/conventions.md`: **copie-os nos outros serviços**.
+- Próxima: **T-004** (login + JWT). Alerta: rota `/api/users/users` no gateway (ideia I-07).
+
 ## 2026-09-29 — T-002 Domínio User
 - `User.Register` + value object `Email` + `UserRole` + `IPasswordHasher` em `Users.Domain`; 20 testes unitários verdes.
 - `CreatedAt` vem de um `TimeProvider` injetado. Próxima: **T-003** (POST /users com EF Core + Testcontainers).

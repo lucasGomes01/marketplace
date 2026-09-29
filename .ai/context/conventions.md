@@ -14,6 +14,21 @@
   Nada de mockar o DbContext.
 - Um container por classe de teste via `IClassFixture` / `ICollectionFixture`, para manter a suíte rápida.
 
+### Padrão de teste de integração (.NET) — referência: `tests/Users/Users.IntegrationTests`
+- `XApiFactory : WebApplicationFactory<Program>, IAsyncLifetime` sobe um `MsSqlContainer` e injeta
+  `ConnectionStrings:Default` + `Database:MigrateOnStartup=true` via `UseSetting`.
+- Uma `[CollectionDefinition]` com `ICollectionFixture<XApiFactory>`; toda classe de teste da API usa `[Collection(...)]`
+  (um único container para o projeto inteiro).
+- Dados únicos por teste (ex.: email com `Guid`), sem limpar o banco entre testes.
+- Para verificar o estado no banco: `factory.WithDbContext(db => ...)`.
+- xUnit 2.x: implementar `IAsyncLifetime` explicitamente (retorna `Task`) porque a factory já tem `DisposeAsync(): ValueTask`.
+
+### Padrão de endpoint (.NET) — referência: `Users.Api/Features/Users/RegisterUser.cs`
+- Classe estática por caso de uso com `Request`/`Response` aninhados e `MapXxx(this IEndpointRouteBuilder)`.
+- Regras da entidade → `DomainException(message, field)` → `ValidationProblem` com a chave `field`.
+- Conflito de unicidade: checar antes **e** tratar `SqlException` 2601/2627 (corrida).
+- Migrations em `Infrastructure/Migrations`: `dotnet tool run dotnet-ef migrations add <Nome> -p src/services/X/X.Api -o Infrastructure/Migrations`.
+
 ## C# / .NET
 - .NET 10, Nullable habilitado, `record` para DTOs e eventos.
 - O domínio protege as invariantes: construtor/factory valida e lança `DomainException`; setters privados.

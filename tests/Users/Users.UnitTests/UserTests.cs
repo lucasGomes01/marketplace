@@ -67,6 +67,14 @@ public class UserTests
         Assert.Throws<DomainException>(() => Register(role: (UserRole)99));
     }
 
+    [Fact]
+    public void Domain_exception_identifies_the_invalid_field()
+    {
+        Assert.Equal("email", Assert.Throws<DomainException>(() => Register(email: "x")).Field);
+        Assert.Equal("name", Assert.Throws<DomainException>(() => Register(name: "")).Field);
+        Assert.Equal("role", Assert.Throws<DomainException>(() => Register(role: (UserRole)99)).Field);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

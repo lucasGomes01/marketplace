@@ -19,19 +19,19 @@ public sealed class User
         var trimmedName = (name ?? string.Empty).Trim();
         if (trimmedName.Length == 0)
         {
-            throw new DomainException("Name is required.");
+            throw new DomainException("Name is required.", "name");
         }
         if (trimmedName.Length > NameMaxLength)
         {
-            throw new DomainException($"Name must have at most {NameMaxLength} characters.");
+            throw new DomainException($"Name must have at most {NameMaxLength} characters.", "name");
         }
         if (!Enum.IsDefined(role))
         {
-            throw new DomainException($"Role '{role}' is not valid.");
+            throw new DomainException($"Role '{role}' is not valid.", "role");
         }
         if (string.IsNullOrWhiteSpace(passwordHash))
         {
-            throw new DomainException("Password hash is required.");
+            throw new DomainException("Password hash is required.", "passwordHash");
         }
 
         return new User

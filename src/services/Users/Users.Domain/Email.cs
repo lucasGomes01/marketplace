@@ -14,7 +14,7 @@ public sealed record Email
 
         if (!IsValid(normalized))
         {
-            throw new DomainException($"'{value}' is not a valid email.");
+            throw new DomainException($"'{value}' is not a valid email.", "email");
         }
 
         return new Email(normalized);

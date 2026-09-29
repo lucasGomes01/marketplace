@@ -1,0 +1,95 @@
+using System.Net;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Users.Domain;
+
+namespace Users.IntegrationTests;
+
+[Collection(UsersApiCollection.Name)]
+public class RegisterUserTests(UsersApiFactory factory)
+{
+    private readonly HttpClient _client = factory.CreateClient();
+
+    private static object ValidRequest(string? email = null, string name = "Maria Silva",
+        string password = "Sup3r-secret", string role = "Buyer") => new
+    {
+        email = email ?? $"user-{Guid.NewGuid():N}@example.com",
+        name,
+        password,
+        role,
+    };
+
+    private record UserResponse(Guid Id, string Email, string Name, string Role);
+
+    [Fact]
+    public async Task Register_returns_201_with_user_and_location()
+    {
+        var response = await _client.PostAsJsonAsync("/users",
+            ValidRequest(email: " Nova.Pessoa@Example.com ", role: "Seller"));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<UserResponse>();
+        Assert.NotNull(body);
+        Assert.NotEqual(Guid.Empty, body.Id);
+        Assert.Equal("nova.pessoa@example.com", body.Email);
+        Assert.Equal("Maria Silva", body.Name);
+        Assert.Equal("Seller", body.Role);
+        Assert.Equal($"/users/{body.Id}", response.Headers.Location?.OriginalString);
+    }
+
+    [Fact]
+    public async Task Password_is_stored_hashed_and_never_returned()
+    {
+        const string password = "Sup3r-secret";
+
+        var response = await _client.PostAsJsonAsync("/users", ValidRequest(password: password));
+
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(password, json);
+        Assert.DoesNotContain("password", json, StringComparison.OrdinalIgnoreCase);
+
+        var id = (await response.Content.ReadFromJsonAsync<UserResponse>())!.Id;
+        var stored = await factory.WithDbContext(db => db.Users.AsNoTracking().SingleAsync(u => u.Id == id));
+        Assert.NotEqual(password, stored.PasswordHash);
+        Assert.True(new Api.Infrastructure.IdentityPasswordHasher().Verify(stored.PasswordHash, password));
+    }
+
+    [Fact]
+    public async Task Registering_an_existing_email_returns_409()
+    {
+        var email = $"dup-{Guid.NewGuid():N}@example.com";
+        await _client.PostAsJsonAsync("/users", ValidRequest(email: email));
+
+        var response = await _client.PostAsJsonAsync("/users", ValidRequest(email: email.ToUpperInvariant()));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.Equal(409, problem?.Status);
+    }
+
+    [Theory]
+    [InlineData("not-an-email", "Maria", "Sup3r-secret", "Buyer")]
+    [InlineData(null, "   ", "Sup3r-secret", "Buyer")]
+    [InlineData(null, "Maria", "Sup3r-secret", "Admin")]
+    [InlineData(null, "Maria", "short", "Buyer")]
+    public async Task Invalid_data_returns_400_validation_problem(string? email, string name, string password, string role)
+    {
+        var response = await _client.PostAsJsonAsync("/users", ValidRequest(email, name, password, role));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.NotEmpty(problem.Errors);
+    }
+
+    [Fact]
+    public async Task Email_has_unique_index_in_database()
+    {
+        var index = await factory.WithDbContext(db => Task.FromResult(
+            db.Model.FindEntityType(typeof(User))!.GetIndexes()
+                .Single(i => i.Properties.Any(p => p.Name == nameof(User.Email)))));
+
+        Assert.True(index.IsUnique);
+    }
+}
