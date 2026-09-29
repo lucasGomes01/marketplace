@@ -9,6 +9,9 @@ x-dotnet-service: &dotnet-service
     RabbitMq__Host: rabbitmq
     RabbitMq__User: ${RABBITMQ_USER}
     RabbitMq__Password: ${RABBITMQ_PASSWORD}
+    Jwt__Issuer: marketplace-users
+    Jwt__Audience: marketplace
+    Jwt__SigningKey: ${JWT_SIGNING_KEY}
   depends_on:
     sqlserver: { condition: service_healthy }
     rabbitmq: { condition: service_healthy }

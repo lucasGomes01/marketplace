@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/" />
   <Folder Name="/src/building-blocks/">
+    <Project Path="src/building-blocks/BuildingBlocks.Auth/BuildingBlocks.Auth.csproj" />
     <Project Path="src/building-blocks/BuildingBlocks.Messaging/BuildingBlocks.Messaging.csproj" />
   </Folder>
   <Folder Name="/src/gateway/">
@@ -20,6 +21,9 @@
     <Project Path="src/services/Users/Users.Domain/Users.Domain.csproj" />
   </Folder>
   <Folder Name="/tests/" />
+  <Folder Name="/tests/BuildingBlocks/">
+    <Project Path="tests/BuildingBlocks/BuildingBlocks.Auth.UnitTests/BuildingBlocks.Auth.UnitTests.csproj" />
+  </Folder>
   <Folder Name="/tests/Cart/">
     <Project Path="tests/Cart/Cart.IntegrationTests/Cart.IntegrationTests.csproj" />
     <Project Path="tests/Cart/Cart.UnitTests/Cart.UnitTests.csproj" />

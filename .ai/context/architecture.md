@@ -57,3 +57,12 @@ internal/messaging/       consumer/publisher RabbitMQ
 ## Autenticação
 O Users emite o JWT (HS256 no MVP; chave em config). Cada serviço valida o JWT (mesma chave e issuer).
 Claims: `sub` (userId), `email`, `role` (`Buyer`|`Seller`).
+
+Tudo vive em `src/building-blocks/BuildingBlocks.Auth`. Para proteger um serviço .NET:
+```csharp
+builder.Services.AddMarketplaceJwtAuth(builder.Configuration);   // lê a seção "Jwt"
+app.UseAuthentication(); app.UseAuthorization();
+app.MapPost("/products", ...).RequireAuthorization(MarketplacePolicies.Seller);
+var userId = httpContext.User.GetUserId();
+```
+O Orders (Go) deve validar o mesmo token: HS256, `iss=marketplace-users`, `aud=marketplace`, a mesma chave.

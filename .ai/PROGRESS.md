@@ -2,6 +2,12 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-09-29 — T-004 Login + JWT
+- Nova lib `BuildingBlocks.Auth` (emissão + validação + policies Buyer/Seller) e `POST /auth/login` + `GET /users/me`.
+- Login não revela se o email existe (mesmo 401 e mesmo custo de hash). 49 testes verdes na solution.
+- Chave JWT em `JWT_SIGNING_KEY` (.env). Próximas: **T-005** (domínio Product) e **T-009** (Order em Go), ambas desbloqueadas.
+  ⚠️ Decidir a I-07 (rotas do gateway) e o nicho antes de T-005/T-006.
+
 ## 2026-09-29 — T-003 POST /users
 - Cadastro com EF Core + migration `InitialCreate` + 9 testes de integração com Testcontainers (SQL Server real).
 - Padrões de endpoint e de teste de integração documentados em `context/conventions.md`: **copie-os nos outros serviços**.

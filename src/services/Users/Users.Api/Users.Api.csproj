@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Users.Domain\Users.Domain.csproj" />
+    <ProjectReference Include="..\..\..\building-blocks\BuildingBlocks.Auth\BuildingBlocks.Auth.csproj" />
   </ItemGroup>
 
 </Project>

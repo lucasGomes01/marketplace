@@ -1,3 +1,5 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +22,36 @@ public sealed class UsersApiFactory : WebApplicationFactory<Program>, IAsyncLife
     {
         builder.UseSetting("ConnectionStrings:Default", _sqlServer.GetConnectionString());
         builder.UseSetting("Database:MigrateOnStartup", "true");
+        builder.UseSetting("Jwt:Issuer", JwtIssuer);
+        builder.UseSetting("Jwt:Audience", "marketplace");
+        builder.UseSetting("Jwt:SigningKey", "integration-tests-signing-key-32-chars-min");
+        builder.UseSetting("Jwt:ExpirationMinutes", "60");
     }
+
+    public const string JwtIssuer = "marketplace-users";
+
+    /// <summary>Cadastra um usuário novo e retorna um client autenticado + os dados usados.</summary>
+    public async Task<(HttpClient Client, Guid UserId, string Email, string Password)> CreateAuthenticatedClient(string role = "Buyer")
+    {
+        var client = CreateClient();
+        var email = $"user-{Guid.NewGuid():N}@example.com";
+        const string password = "Sup3r-secret";
+
+        var registered = await client.PostAsJsonAsync("/users", new { email, name = "Test User", password, role });
+        registered.EnsureSuccessStatusCode();
+        var userId = (await registered.Content.ReadFromJsonAsync<IdResponse>())!.Id;
+
+        var login = await client.PostAsJsonAsync("/auth/login", new { email, password });
+        login.EnsureSuccessStatusCode();
+        var token = (await login.Content.ReadFromJsonAsync<TokenResponse>())!.AccessToken;
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return (client, userId, email, password);
+    }
+
+    private sealed record IdResponse(Guid Id);
+
+    public sealed record TokenResponse(string AccessToken, string TokenType, DateTimeOffset ExpiresAt);
 
     public async Task<T> WithDbContext<T>(Func<UsersDbContext, Task<T>> action)
     {
