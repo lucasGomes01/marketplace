@@ -115,10 +115,18 @@ func (c *Consumer) Run(ctx context.Context) error {
 			if !c.process(ctx, record) {
 				return nil // contexto cancelado no meio: não confirma, a mensagem volta depois
 			}
-			if err := c.client.CommitRecords(ctx, record); err != nil && ctx.Err() == nil {
-				c.log.Error("kafka commit failed", "topic", record.Topic, "offset", record.Offset, "error", err)
-			}
+			c.commit(ctx, record)
 		}
+	}
+}
+
+// commit confirma o offset de uma mensagem já processada. Usa um contexto próprio: se o serviço estiver
+// desligando (ctx cancelado), a confirmação ainda acontece — senão a mensagem seria reprocessada no próximo início.
+func (c *Consumer) commit(ctx context.Context, record *kgo.Record) {
+	commitCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	if err := c.client.CommitRecords(commitCtx, record); err != nil {
+		c.log.Error("kafka commit failed", "topic", record.Topic, "partition", record.Partition, "offset", record.Offset, "error", err)
 	}
 }
 
