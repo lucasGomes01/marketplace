@@ -3,6 +3,7 @@
 ## Geral
 - Código, nomes de classes e testes em **inglês**; documentação (`.ai`, README) em **português**.
 - Commits em Conventional Commits + id da tarefa: `feat(cart): add item to cart [T-007]`.
+- Commits saem **só no nome do dono do repositório**: agentes de IA não adicionam `Co-Authored-By` nem outra atribuição.
 - Branch: `feat/T-XXX-slug`, `fix/...`, `chore/...`. PR pequeno, uma tarefa por PR; o CI precisa estar verde para mergear.
 
 ## TDD
