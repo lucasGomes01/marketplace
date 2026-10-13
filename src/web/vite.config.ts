@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
@@ -9,5 +10,11 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:5000',
     },
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    // Origem fixa para o fetch resolver URLs relativas (/api/...) nos testes.
+    environmentOptions: { jsdom: { url: 'http://localhost:5173' } },
   },
 })

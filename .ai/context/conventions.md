@@ -46,7 +46,9 @@
 
 ## React / TS
 - Componentes funcionais, TS estrito. Chamadas HTTP ficam em `src/api/*` (fetch tipado), nunca direto no componente.
-- Testes com Vitest + Testing Library (adicionar quando a primeira tela for criada).
+- Testes com Vitest + Testing Library + MSW (`npm test`). Teste a **aplicação inteira** numa rota com `renderApp(rota, { loggedIn })` (`src/test/render.tsx`); a API falsa fica em `src/test/server.ts` e cada teste sobrescreve com `server.use(...)`.
+- Mensagens da API chegam em inglês: traduza em `src/api/messages.ts` (desconhecida passa como veio).
+- Rotas protegidas ficam dentro de `<Route element={<RequireAuth />}>`; sessão via `useAuth()`.
 
 ## API
 - Rotas no plural e em minúsculas: `/products`, `/products/{id}`, `/cart/items`.

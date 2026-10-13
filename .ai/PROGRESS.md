@@ -2,6 +2,11 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-013 Telas de conta (front)
+- Backlog reorganizado: cada fase entrega backend **e** telas (T-014 após T-006, nova T-014b após T-008, T-015 após T-012).
+- Front com react-router, cliente HTTP tipado, sessão com JWT, telas Cadastro/Entrar/Minha conta + layout responsivo claro/escuro.
+- 22 testes de front (Vitest + Testing Library + MSW) no CI. Verificado no navegador contra a API real. Próxima: **T-006** (API de produtos) e depois **T-014** (telas de produtos).
+
 ## 2026-10-13 — T-005 Domínio Product
 - `Product` (criar, mudar preço, entrada/saída de estoque, dono) + value object `Money` em `Catalog.Domain`; 34 testes.
 - Nicho segue genérico. 96 testes verdes na solution. Próxima: **T-006** (endpoints do Catalog: copiar o padrão do Users).
