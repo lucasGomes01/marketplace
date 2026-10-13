@@ -2,6 +2,10 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-005 Domínio Product
+- `Product` (criar, mudar preço, entrada/saída de estoque, dono) + value object `Money` em `Catalog.Domain`; 34 testes.
+- Nicho segue genérico. 96 testes verdes na solution. Próxima: **T-006** (endpoints do Catalog: copiar o padrão do Users).
+
 ## 2026-10-13 — T-004b Rotas do gateway
 - Gateway roteia por recurso: `/api/users`, `/api/auth`, `/api/products`, `/api/cart`, `/api/orders`; health em `/health/<serviço>`.
 - Novo projeto `Gateway.IntegrationTests` (13 testes). 62 testes verdes na solution. Próxima: **T-005** (Product, nicho genérico).

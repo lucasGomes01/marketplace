@@ -21,7 +21,7 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 ## Fase 2 — Produto
 | ID | Tarefa | Serviço | Depende | Status |
 |---|---|---|---|---|
-| T-005 | Domínio `Product` + value object `Money` (preço > 0, estoque ≥ 0, dono Seller) | Catalog | T-001 | todo |
+| T-005 | Domínio `Product` + value object `Money` (preço > 0, estoque ≥ 0, dono Seller) | Catalog | T-001 | done |
 | T-006 | `POST /products` (só Seller), `GET /products` (paginado), `GET /products/{id}` | Catalog | T-004, T-005 | todo |
 
 ## Fase 3 — Carrinho
