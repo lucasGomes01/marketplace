@@ -29,6 +29,7 @@ Ela descreve **o quê** construir, **como** construir e **em que ordem**.
    - 🟢 menor código que faz passar;
    - 🔵 refatorar com os testes verdes.
 5. Rodar a suíte inteira do serviço afetado (e `dotnet build` da solution) antes de concluir.
+   No front, rodar **`npm test`, `npm run lint` e `npm run build`**: o Vitest não checa tipos, só o `tsc` do build.
 6. Atualizar: checkboxes da tarefa, status `done` no BACKLOG, `PROGRESS.md` (3–5 linhas),
    e `context/*` se algo mudou (ex.: novo evento → `events.md`).
 7. Commit em Conventional Commits referenciando a tarefa (`feat(catalog): ... [T-005]`).
