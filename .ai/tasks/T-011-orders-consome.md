@@ -44,9 +44,10 @@ E dar ao comprador as rotas para ver os pedidos.
 - Baixa de estoque e confirmação/recusa (T-012), telas (T-015), dead-letter topic.
 
 ## Notas
-- 2026-10-13 (concluída). Testes Go: unitários de `auth` (JWT HS256 sem lib externa), `order` (centavos ↔ decimal sem float), `app` (PlaceOrder idempotente) e `api`; integração do `store` com **SQL Server real** (passou local). Integração do `messaging` com Kafka real: **não roda local** (testcontainers-go dentro de container no Docker Desktop anuncia 0.0.0.0) — validada no **CI** e, na prática, pelo E2E abaixo.
+- 2026-10-13 (concluída). Testes Go: unitários de `auth` (JWT HS256 sem lib externa), `order` (centavos ↔ decimal sem float), `app` (PlaceOrder idempotente) e `api`; integração do `store` com **SQL Server real** (passou local). Integração do `messaging` com Kafka real: passa local e no CI (ver correção abaixo).
 - SQL Server do teste: espera aumentada para 4 min (o padrão de 60 s estourou com a máquina carregada).
 - Validado no compose: checkout → pedido em ~1 s (`Pending`, total certo) → `order.placed` no Kafka; `/api/orders` sem login 401; pedido de outra pessoa 404.
 - **Idempotência provada:** consumer group voltado para o início do tópico → todos os checkouts reentregues → continuam 2 pedidos (nenhum duplicado), `order.placed` republicado. Mensagem inválida antiga (`{"hello":"kafka"}` da T-017) é pulada sem travar a fila.
 - Dinheiro sai no JSON como número com 2 casas (`399.80`), igual às APIs .NET.
 - Dockerfile do Orders passou a copiar `go.sum`.
+- **Correção (mesmo dia):** a primeira versão desta nota dizia que o teste de Kafka do Go "não roda dentro de container no Docker Desktop" e que seria "validado no CI". **Estava errado:** o CI falhou com o mesmo erro. A causa real era a imagem `confluent-local:7.9.0` — o módulo testcontainers-go v0.44 só suporta `confluent-local` e é testado com a 7.5.0 (a 7.9.0 anuncia 0.0.0.0; `apache/kafka` nem tem o shell que o módulo injeta). Com a 7.5.0 os 3 cenários passam local (dentro de container) e no CI.

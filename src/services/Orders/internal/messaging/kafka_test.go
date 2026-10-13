@@ -20,7 +20,7 @@ func startKafka(t *testing.T, topics ...string) []string {
 		t.Skip("integração: precisa de Docker (rode sem -short)")
 	}
 	ctx := context.Background()
-	container, err := kafka.Run(ctx, "confluentinc/confluent-local:7.9.0")
+	container, err := kafka.Run(ctx, "confluentinc/confluent-local:7.5.0") // versão suportada pelo módulo testcontainers-go v0.44
 	if err != nil {
 		t.Fatalf("start kafka: %v", err)
 	}
