@@ -1,10 +1,9 @@
 using System.Net;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Cart.IntegrationTests;
 
-public class HealthEndpointTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+[Collection(CartApiCollection.Name)]
+public class HealthEndpointTests(CartApiFactory factory)
 {
     [Fact]
     public async Task Get_health_returns_ok()

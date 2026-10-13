@@ -12,11 +12,14 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Cart.Domain\Cart.Domain.csproj" />
+    <ProjectReference Include="..\Cart.Application\Cart.Application.csproj" />
+    <ProjectReference Include="..\Cart.Infrastructure\Cart.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\building-blocks\BuildingBlocks.Api\BuildingBlocks.Api.csproj" />
+    <ProjectReference Include="..\..\..\building-blocks\BuildingBlocks.Auth\BuildingBlocks.Auth.csproj" />
   </ItemGroup>
 
 </Project>

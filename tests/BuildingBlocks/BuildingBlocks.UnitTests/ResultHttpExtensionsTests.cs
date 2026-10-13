@@ -39,6 +39,7 @@ public class ResultHttpExtensionsTests
     [InlineData(ErrorType.Unauthorized, 401)]
     [InlineData(ErrorType.NotFound, 404)]
     [InlineData(ErrorType.Conflict, 409)]
+    [InlineData(ErrorType.Unavailable, 503)]
     public void Other_errors_become_problem_details_with_status_title_and_code(ErrorType type, int status)
     {
         var http = ToHttp(new Error("some.code", "Something happened.", type));

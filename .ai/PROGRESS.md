@@ -2,6 +2,11 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-008 API do carrinho
+- `GET/POST/PUT/DELETE /api/cart...` em camadas; preço/estoque vêm do Catalog por HTTP; 503 se o Catalog cair; rowversion.
+- Bug do EF com coleção owned (item novo rastreado como Modified) corrigido no repositório. 231 testes .NET verdes.
+- Próxima: **T-014b** (botão "Adicionar ao carrinho" e tela do carrinho).
+
 ## 2026-10-13 — T-007 Domínio do carrinho
 - `ShoppingCart` + `CartItem` (snapshot do produto) + `Money` com soma. Vários vendedores, uma moeda, 1..99 por item. 23 testes.
 

@@ -6,6 +6,9 @@ public enum ErrorType
     Unauthorized,
     NotFound,
     Conflict,
+
+    /// <summary>Uma dependência (outro serviço) está fora do ar; tentar de novo pode funcionar.</summary>
+    Unavailable,
 }
 
 /// <summary>
@@ -22,4 +25,6 @@ public sealed record Error(string Code, string Message, ErrorType Type, string? 
     public static Error NotFound(string code, string message) => new(code, message, ErrorType.NotFound);
 
     public static Error Conflict(string code, string message) => new(code, message, ErrorType.Conflict);
+
+    public static Error Unavailable(string code, string message) => new(code, message, ErrorType.Unavailable);
 }

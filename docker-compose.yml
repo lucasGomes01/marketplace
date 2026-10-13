@@ -97,6 +97,7 @@ services:
     environment:
       <<: *dotnet-env
       ConnectionStrings__Default: Server=sqlserver;Database=CartDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      Services__Catalog: http://catalog:8080
 
   orders:
     profiles: [apps]

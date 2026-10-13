@@ -53,7 +53,8 @@ internal/messaging/       consumer/producer Kafka (franz-go)
 
 ## Comunicação
 - **Síncrona (HTTP):** só quando a resposta é necessária na hora.
-  Ex.: o Cart consulta o Catalog para obter preço e estoque ao adicionar um item.
+  Ex.: o Cart consulta o Catalog (`GET /products/{id}`, timeout 5 s) para obter preço e estoque ao adicionar um item.
+  Dependência fora do ar → `Error.Unavailable` → **503** (nunca 500). URL base em `Services:<Serviço>`.
 - **Assíncrona (Kafka):** para tudo que é consequência de um fato. Tópicos, chaves e contratos em `events.md`.
 - Um tópico por tipo de evento (`cart.checked-out`, `order.placed`...). Chave = id do agregado (ordem por pedido).
   Cada serviço consome com seu próprio consumer group (`orders-service`, `catalog-service`...).

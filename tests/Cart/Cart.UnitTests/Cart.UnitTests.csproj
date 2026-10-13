@@ -21,6 +21,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\services\Cart\Cart.Domain\Cart.Domain.csproj" />
+    <ProjectReference Include="..\..\..\src\services\Cart\Cart.Application\Cart.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\services\Cart\Cart.Infrastructure\Cart.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

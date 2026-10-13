@@ -12,7 +12,9 @@
   <Folder Name="/src/services/" />
   <Folder Name="/src/services/Cart/">
     <Project Path="src/services/Cart/Cart.Api/Cart.Api.csproj" />
+    <Project Path="src/services/Cart/Cart.Application/Cart.Application.csproj" />
     <Project Path="src/services/Cart/Cart.Domain/Cart.Domain.csproj" />
+    <Project Path="src/services/Cart/Cart.Infrastructure/Cart.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/src/services/Catalog/">
     <Project Path="src/services/Catalog/Catalog.Api/Catalog.Api.csproj" />
