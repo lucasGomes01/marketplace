@@ -13,7 +13,7 @@ Garantir que qualquer pessoa (ou IA) consiga subir e testar tudo antes de começ
       e as rotas equivalentes de users, catalog e cart respondem 200 pelo gateway.
 - [x] Testes do Go rodam localmente (Go 1.26 instalado **ou** via
       `docker run --rm -v ${PWD}/src/services/Orders:/src -w /src golang:1.26-alpine go test ./...`).
-- [ ] ~~Repositório publicado no GitHub e CI verde~~ → movido para **T-001b** (depende do humano).
+- [x] Repositório publicado no GitHub e CI verde (T-001b, 2026-10-13): https://github.com/lucasGomes01/marketplace
 
 ## Testes esperados
 - Os testes de fumaça já existentes (health) de todos os serviços.

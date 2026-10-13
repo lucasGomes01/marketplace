@@ -2,6 +2,11 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-001b GitHub + CI
+- Repo público https://github.com/lucasGomes01/marketplace; primeiro CI verde nos 4 jobs (.NET, Go, Web, Docker).
+- Histórico reescrito para remover `Co-Authored-By` de IA: commits só no nome do dono (regra em `conventions.md`).
+- `gh` instalado e autenticado (lucasGomes01). Pendentes antes da T-005: nicho e I-07 (rotas do gateway).
+
 ## 2026-09-29 — T-004 Login + JWT
 - Nova lib `BuildingBlocks.Auth` (emissão + validação + policies Buyer/Seller) e `POST /auth/login` + `GET /users/me`.
 - Login não revela se o email existe (mesmo 401 e mesmo custo de hash). 49 testes verdes na solution.

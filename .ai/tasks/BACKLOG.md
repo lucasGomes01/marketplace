@@ -8,7 +8,7 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 |---|---|---|---|---|
 | T-000 | Scaffold: solution, gateway, serviços, web, compose, CI, `.ai` | Infra | — | done |
 | T-001 | Validar ambiente local: `docker compose up`, testes Go via Docker | Infra | T-000 | done |
-| T-001b | Publicar no GitHub e ver CI verde (**humano**: criar repo remoto; não bloqueia as demais) | Infra | T-001 | todo |
+| T-001b | Publicar no GitHub e ver CI verde | Infra | T-001 | done |
 
 ## Fase 1 — Usuário
 | ID | Tarefa | Serviço | Depende | Status |
