@@ -5,7 +5,9 @@ import { Layout } from './components/Layout'
 import { AccountPage } from './pages/AccountPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
+import { NewProductPage } from './pages/NewProductPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { ProductPage } from './pages/ProductPage'
 import { RegisterPage } from './pages/RegisterPage'
 
 /** Rotas da aplicação (separadas do Router para os testes usarem MemoryRouter). */
@@ -16,8 +18,10 @@ export function AppRoutes() {
         <Route index element={<HomePage />} />
         <Route path="cadastro" element={<RegisterPage />} />
         <Route path="entrar" element={<LoginPage />} />
+        <Route path="produtos/:id" element={<ProductPage />} />
         <Route element={<RequireAuth />}>
           <Route path="minha-conta" element={<AccountPage />} />
+          <Route path="vender/novo" element={<NewProductPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>

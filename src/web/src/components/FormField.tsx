@@ -1,4 +1,4 @@
-import { useId, type InputHTMLAttributes } from 'react'
+import { useId, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 
 interface FormFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
@@ -25,6 +25,43 @@ export function FormField({ label, error, hint, id, ...inputProps }: FormFieldPr
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         {...inputProps}
+      />
+      {error ? (
+        <p id={errorId} className="field__error">
+          {error}
+        </p>
+      ) : hint ? (
+        <p id={hintId} className="field__hint">
+          {hint}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+interface TextAreaFieldProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label: string
+  error?: string
+  hint?: string
+}
+
+export function TextAreaField({ label, error, hint, id, ...textareaProps }: TextAreaFieldProps) {
+  const generatedId = useId()
+  const inputId = id ?? generatedId
+  const hintId = `${inputId}-hint`
+  const errorId = `${inputId}-error`
+
+  return (
+    <div className="field">
+      <label htmlFor={inputId} className="field__label">
+        {label}
+      </label>
+      <textarea
+        id={inputId}
+        className="field__input field__input--multiline"
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : hint ? hintId : undefined}
+        {...textareaProps}
       />
       {error ? (
         <p id={errorId} className="field__error">

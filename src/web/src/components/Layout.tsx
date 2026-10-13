@@ -15,12 +15,16 @@ export function Layout() {
       <header className="site-header">
         <div className="container site-header__inner">
           <Link to="/" className="brand">
-            <span className="brand__mark" aria-hidden="true">◆</span> Marketplace
+            <span className="brand__mark" aria-hidden="true">◆</span>
+            <span className="brand__name">Marketplace</span>
           </Link>
 
           <nav className="site-nav" aria-label="Conta">
             {state.status === 'authenticated' ? (
               <>
+                <NavLink to="/vender/novo" className="site-nav__link">
+                  Vender
+                </NavLink>
                 <NavLink to="/minha-conta" className="site-nav__user">
                   {state.user.name}
                 </NavLink>

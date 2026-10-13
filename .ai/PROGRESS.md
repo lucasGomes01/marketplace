@@ -2,6 +2,11 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-014 Telas do catálogo
+- Vitrine (`/`, paginada), página do produto (`/produtos/:id`) e anunciar produto (`/vender/novo`, com convite para quem só compra).
+- Preço em formato brasileiro na entrada e na exibição. Layout corrigido para celular. 49 testes de front.
+- Próximas: **T-007** (domínio do carrinho) → **T-008** (API do carrinho) → **T-014b** (botão e tela do carrinho).
+
 ## 2026-10-13 — T-006 API de produtos
 - Catalog em camadas: `POST /api/products` (Seller), `GET /api/products` (paginado, mais recentes primeiro), `GET /api/products/{id}`.
 - Bug corrigido em todos os serviços: JSON malformado dava 500 → agora 400 (`UseMarketplaceExceptionHandler`). 170 testes .NET verdes.

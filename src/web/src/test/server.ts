@@ -1,6 +1,10 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import type { Role } from '../api/users'
+import { productHandlers } from './products'
+import { buyerToken, validToken } from './tokens'
+
+export { buyerToken, validToken }
 
 interface FakeUser {
   id: string
@@ -31,8 +35,6 @@ export const buyerUser: FakeUser = {
   sellerSince: null,
 }
 
-export const validToken = 'valid-token'
-export const buyerToken = 'buyer-token'
 
 const inOneHour = () => new Date(Date.now() + 60 * 60 * 1000).toISOString()
 
@@ -102,4 +104,4 @@ export const handlers = [
   }),
 ]
 
-export const server = setupServer(...handlers)
+export const server = setupServer(...handlers, ...productHandlers)
