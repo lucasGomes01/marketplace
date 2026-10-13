@@ -1,8 +1,10 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { useAuth } from '../auth/context'
+import { useCart } from '../cart/context'
 
 export function Layout() {
   const { state, logout } = useAuth()
+  const { count } = useCart()
   const navigate = useNavigate()
 
   function handleLogout() {
@@ -24,6 +26,9 @@ export function Layout() {
               <>
                 <NavLink to="/vender/novo" className="site-nav__link">
                   Vender
+                </NavLink>
+                <NavLink to="/carrinho" className="site-nav__link site-nav__cart">
+                  Carrinho ({count})
                 </NavLink>
                 <NavLink to="/minha-conta" className="site-nav__user">
                   {state.user.name}

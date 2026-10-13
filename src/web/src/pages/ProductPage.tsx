@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { ApiError } from '../api/client'
 import { productsApi, stockLabel, type Product } from '../api/products'
+import { AddToCartButton } from '../components/AddToCartButton'
 import { formatPrice } from '../utils/money'
 
 type Load = { status: 'loading' } | { status: 'not-found' } | { status: 'error' } | { status: 'ready'; product: Product }
@@ -70,9 +71,7 @@ export function ProductPage() {
             {stockLabel(product.stock)}
           </p>
           {product.description ? <p className="product-detail__description">{product.description}</p> : null}
-          <button type="button" className="button button--primary" disabled title="O carrinho chega na próxima etapa">
-            Carrinho em breve
-          </button>
+          <AddToCartButton product={product} />
         </div>
       </article>
     </>

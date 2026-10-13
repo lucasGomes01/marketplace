@@ -1,8 +1,9 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import type { Role } from '../api/users'
+import { cartHandlers } from './cart'
 import { productHandlers } from './products'
-import { buyerToken, validToken } from './tokens'
+import { buyerToken, buyerUserId, sellerUserId, validToken } from './tokens'
 
 export { buyerToken, validToken }
 
@@ -17,7 +18,7 @@ interface FakeUser {
 
 /** Conta que compra e vende. */
 export const existingUser: FakeUser = {
-  id: '01a0edf9-3a0c-7243-8a4c-8db1e27c1be1',
+  id: sellerUserId,
   email: 'maria@example.com',
   name: 'Maria Silva',
   password: 'Sup3r-secret',
@@ -27,7 +28,7 @@ export const existingUser: FakeUser = {
 
 /** Conta que só compra (pode ativar o perfil de vendedor). */
 export const buyerUser: FakeUser = {
-  id: '01a0edf9-3a0c-7243-8a4c-8db1e27c1be2',
+  id: buyerUserId,
   email: 'joao@example.com',
   name: 'João Souza',
   password: 'Sup3r-secret',
@@ -104,4 +105,4 @@ export const handlers = [
   }),
 ]
 
-export const server = setupServer(...handlers, ...productHandlers)
+export const server = setupServer(...handlers, ...productHandlers, ...cartHandlers)

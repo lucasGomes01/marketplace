@@ -41,7 +41,7 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 |---|---|---|---|---|
 | T-007 | Domínio `Cart` (adicionar, somar quantidade, remover, total) | Cart | T-005 | done |
 | T-008 | API do carrinho (`GET /cart`, `POST /cart/items`, `DELETE /cart/items/{productId}`); consulta preço/estoque no Catalog por HTTP | Cart | T-006, T-007 | done |
-| T-014b | **Telas:** botão "adicionar ao carrinho" e tela do carrinho (sem checkout) | Web | T-008, T-014 | todo |
+| T-014b | **Telas:** botão "adicionar ao carrinho" e tela do carrinho (sem checkout) | Web | T-008, T-014 | done |
 
 ## Fase 4 — Pedido
 | ID | Tarefa | Serviço | Depende | Status |

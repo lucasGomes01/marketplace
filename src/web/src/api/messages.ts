@@ -27,6 +27,12 @@ const tables = {
     ['stock', /negative/i, 'O estoque não pode ser negativo.'],
     ['currency', /./, 'Moeda inválida.'],
   ],
+  cart: [
+    ['quantity', /only (\d+)/i, (m) => `Só há ${m[1]} em estoque.`],
+    ['quantity', /out of stock/i, 'Este produto esgotou.'],
+    ['quantity', /between 1 and (\d+)/i, (m) => `A quantidade máxima por produto é ${m[1]}.`],
+    ['productId', /own product/i, 'Este produto é seu.'],
+  ],
 } satisfies Record<string, Translation[]>
 
 export type MessageContext = keyof typeof tables

@@ -1,8 +1,10 @@
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { AuthProvider } from './auth/AuthProvider'
+import { CartProvider } from './cart/CartProvider'
 import { RequireAuth } from './auth/RequireAuth'
 import { Layout } from './components/Layout'
 import { AccountPage } from './pages/AccountPage'
+import { CartPage } from './pages/CartPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { NewProductPage } from './pages/NewProductPage'
@@ -21,6 +23,7 @@ export function AppRoutes() {
         <Route path="produtos/:id" element={<ProductPage />} />
         <Route element={<RequireAuth />}>
           <Route path="minha-conta" element={<AccountPage />} />
+          <Route path="carrinho" element={<CartPage />} />
           <Route path="vender/novo" element={<NewProductPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
@@ -33,7 +36,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <CartProvider>
+          <AppRoutes />
+        </CartProvider>
       </AuthProvider>
     </BrowserRouter>
   )

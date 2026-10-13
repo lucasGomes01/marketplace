@@ -51,6 +51,9 @@ export const manyProducts = (count: number): Product[] =>
     name: `Produto ${i + 1}`,
   }))
 
+/** Produto atual da API falsa (o carrinho falso consulta aqui, como o Cart real consulta o Catalog). */
+export const findFakeProduct = (id: string) => products.find((p) => p.id === id)
+
 export const productHandlers = [
   http.get('/api/products', ({ request }) => {
     const url = new URL(request.url)

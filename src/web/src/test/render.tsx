@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { AppRoutes } from '../App'
 import { AuthProvider } from '../auth/AuthProvider'
+import { CartProvider } from '../cart/CartProvider'
 import { saveSession } from '../auth/session'
 import { buyerToken, validToken } from './server'
 
@@ -25,7 +26,9 @@ export function renderApp(route = '/', { loggedIn = false }: Options = {}) {
     ...render(
       <MemoryRouter initialEntries={[route]}>
         <AuthProvider>
-          <AppRoutes />
+          <CartProvider>
+            <AppRoutes />
+          </CartProvider>
         </AuthProvider>
       </MemoryRouter>,
     ),

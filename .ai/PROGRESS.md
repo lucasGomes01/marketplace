@@ -2,6 +2,10 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-014b Telas do carrinho
+- "Adicionar ao carrinho" na página do produto, tela `/carrinho` (± quantidade, remover, total) e contador no cabeçalho.
+- **Fase 3 (carrinho) concluída.** Próxima: **Fase 4 — pedido**: T-009 (domínio Order em Go) → T-010 (checkout publica no Kafka) → T-011 → T-012 → T-015.
+
 ## 2026-10-13 — T-008 API do carrinho
 - `GET/POST/PUT/DELETE /api/cart...` em camadas; preço/estoque vêm do Catalog por HTTP; 503 se o Catalog cair; rowversion.
 - Bug do EF com coleção owned (item novo rastreado como Modified) corrigido no repositório. 231 testes .NET verdes.
