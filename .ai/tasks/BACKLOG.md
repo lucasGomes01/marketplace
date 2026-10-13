@@ -48,7 +48,7 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 |---|---|---|---|---|
 | T-009 | Domínio `Order` em Go + máquina de status (Pending → Confirmed/Rejected) | Orders | T-001 | done |
 | T-010 | BuildingBlocks.Messaging (producer/consumer Kafka + envelope, `IEventPublisher`) e `POST /cart/checkout` publicando `cart.checked-out` | Cart | T-008 | done |
-| T-011 | Orders consome `cart.checked-out` (franz-go), persiste no SQL Server, publica `order.placed`; `GET /orders` do comprador | Orders | T-009, T-010 | todo |
+| T-011 | Orders consome `cart.checked-out` (franz-go), persiste no SQL Server, publica `order.placed`; `GET /orders` do comprador | Orders | T-009, T-010 | done |
 | T-012 | Catalog baixa estoque em `order.placed` (idempotente) → `stock.reserved`/`stock.rejected`; Orders atualiza status (o carrinho já é limpo no checkout, T-010) | Catalog/Orders/Cart | T-011 | todo |
 | T-015 | **Telas:** finalizar pedido (checkout) e "meus pedidos" com status | Web | T-012, T-014b | todo |
 
@@ -68,5 +68,6 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | I-06 | CD: publicar imagens no GHCR e deploy automático | idea |
 | I-07 | Rotas do gateway: evitar `/api/users/users` → virou **T-004b** | done |
 | I-08 | Rate limit nas tentativas de login (no gateway ou no Users) + refresh token | idea |
+| I-11 | Dead-letter topic (`<tópico>.dlq`) para eventos inválidos, em vez de só registrar no log e pular | idea |
 | I-10 | Investigar falha intermitente dos testes de integração com a suíte inteira em paralelo (vários SQL Server + Kafka). Visto 2× em 2026-10-13, não reproduzido em 6 rodadas seguidas. O CI agora guarda os resultados detalhados quando falha | idea |
 | I-09 | Erros com **códigos** para o front traduzir sem regex. Já existem no `Result` (T-018) e saem em 401/404/409; falta expô-los no 400 de validação e usar no front | idea |

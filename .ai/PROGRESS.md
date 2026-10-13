@@ -2,6 +2,11 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-011 Orders consome o checkout (Go)
+- Orders: consumidor Kafka (franz-go, grupo `orders-service`) → pedido no SQL Server (go-mssqldb) → `order.placed`; `GET /api/orders` e `/api/orders/{id}` com JWT validado em Go.
+- Idempotência provada com replay do tópico. Teste de Kafka do Go só roda no CI (limitação do Docker Desktop).
+- Próxima: **T-012** (Catalog baixa estoque → `stock.reserved`/`stock.rejected` → Orders confirma/recusa).
+
 ## 2026-10-13 — T-010 Checkout no Kafka
 - `POST /api/cart/checkout` publica `cart.checked-out` (checkoutId determinístico = id do pedido) e esvazia o carrinho; 503 se o Kafka cair.
 - `IEventPublisher` (porta) + `KafkaEventPublisher` (BuildingBlocks.Messaging). Bug de ordem dos itens corrigido (`Position`).

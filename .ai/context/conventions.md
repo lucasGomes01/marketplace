@@ -53,6 +53,10 @@
   `github.com/twmb/franz-go` (Kafka), `github.com/testcontainers/testcontainers-go`.
 - `go vet` e `gofmt` limpos. Erros embrulhados com `fmt.Errorf("...: %w", err)`.
 - Testes table-driven quando houver variações.
+- Pacotes em `internal/`: `order` (domínio), `app` (casos de uso + interfaces que usa), `store`, `messaging`, `auth`, `api`.
+  A interface fica em quem **usa** (`app.Repository`), não em quem implementa.
+- Testes de integração (testcontainers-go) são pulados com `go test -short`; no CI rodam sem `-short`.
+- Erro de evento que nunca vai dar certo → `messaging.Permanent(err)` (registra e pula); outros erros → nova tentativa com backoff.
 
 ## React / TS
 - Componentes funcionais, TS estrito. Chamadas HTTP ficam em `src/api/*` (fetch tipado), nunca direto no componente.
