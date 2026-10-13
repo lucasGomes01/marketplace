@@ -18,7 +18,8 @@ public class LoginHandlerTests
     {
         _tokens = new FakeTokenIssuer(_clock);
         _handler = new LoginHandler(_repository, _hasher, _tokens);
-        _maria = User.Register("maria@example.com", "Maria", UserRole.Seller, _hasher.Hash("Sup3r-secret"), _clock);
+        _maria = User.Register("maria@example.com", "Maria", _hasher.Hash("Sup3r-secret"), _clock);
+        _maria.BecomeSeller(_clock);
         _repository.Users.Add(_maria);
     }
 
@@ -32,7 +33,9 @@ public class LoginHandlerTests
 
         Assert.Equal($"token-for-{_maria.Id}", result.Value.AccessToken);
         Assert.Equal(_clock.GetUtcNow().AddHours(1), result.Value.ExpiresAt);
-        Assert.Equal((_maria.Id, "maria@example.com", UserRole.Seller), _tokens.LastIssued);
+        var issued = _tokens.LastIssued!.Value;
+        Assert.Equal((_maria.Id, "maria@example.com"), (issued.UserId, issued.Email));
+        Assert.Equal([UserRole.Buyer, UserRole.Seller], issued.Roles);
     }
 
     [Fact]

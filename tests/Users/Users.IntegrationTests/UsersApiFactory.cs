@@ -18,6 +18,9 @@ public sealed class UsersApiFactory : WebApplicationFactory<Program>, IAsyncLife
 
     Task IAsyncLifetime.InitializeAsync() => _sqlServer.StartAsync();
 
+    /// <summary>Conexão do container, para testes que criam bancos próprios (ex.: migrations).</summary>
+    public string SqlServerConnectionString => _sqlServer.GetConnectionString();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("ConnectionStrings:Default", _sqlServer.GetConnectionString());
@@ -30,14 +33,14 @@ public sealed class UsersApiFactory : WebApplicationFactory<Program>, IAsyncLife
 
     public const string JwtIssuer = "marketplace-users";
 
-    /// <summary>Cadastra um usuário novo e retorna um client autenticado + os dados usados.</summary>
-    public async Task<(HttpClient Client, Guid UserId, string Email, string Password)> CreateAuthenticatedClient(string role = "Buyer")
+    /// <summary>Cadastra um usuário novo (opcionalmente já vendedor) e retorna um client autenticado.</summary>
+    public async Task<(HttpClient Client, Guid UserId, string Email, string Password)> CreateAuthenticatedClient(bool seller = false)
     {
         var client = CreateClient();
         var email = $"user-{Guid.NewGuid():N}@example.com";
         const string password = "Sup3r-secret";
 
-        var registered = await client.PostAsJsonAsync("/users", new { email, name = "Test User", password, role });
+        var registered = await client.PostAsJsonAsync("/users", new { email, name = "Test User", password });
         registered.EnsureSuccessStatusCode();
         var userId = (await registered.Content.ReadFromJsonAsync<IdResponse>())!.Id;
 
@@ -46,6 +49,15 @@ public sealed class UsersApiFactory : WebApplicationFactory<Program>, IAsyncLife
         var token = (await login.Content.ReadFromJsonAsync<TokenResponse>())!.AccessToken;
 
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        if (seller)
+        {
+            var activated = await client.PostAsync("/users/me/seller", null);
+            activated.EnsureSuccessStatusCode();
+            var newToken = (await activated.Content.ReadFromJsonAsync<TokenResponse>())!.AccessToken;
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", newToken);
+        }
+
         return (client, userId, email, password);
     }
 

@@ -10,21 +10,21 @@ public class LoginTests(UsersApiFactory factory)
 {
     private readonly HttpClient _client = factory.CreateClient();
 
-    private async Task<(string Email, string Password)> RegisterUser(string role = "Buyer")
+    private async Task<(string Email, string Password)> RegisterUser()
     {
         var email = $"login-{Guid.NewGuid():N}@example.com";
         const string password = "Sup3r-secret";
-        var response = await _client.PostAsJsonAsync("/users", new { email, name = "Maria", password, role });
+        var response = await _client.PostAsJsonAsync("/users", new { email, name = "Maria", password });
         response.EnsureSuccessStatusCode();
         return (email, password);
     }
 
-    private sealed record MeResponse(Guid Id, string Email, string Name, string Role);
+    private sealed record MeResponse(Guid Id, string Email, string Name, string[] Roles);
 
     [Fact]
     public async Task Login_with_valid_credentials_returns_bearer_token_with_user_claims()
     {
-        var (email, password) = await RegisterUser(role: "Seller");
+        var (email, password) = await RegisterUser();
 
         var response = await _client.PostAsJsonAsync("/auth/login", new { email, password });
 
@@ -37,7 +37,7 @@ public class LoginTests(UsersApiFactory factory)
         var jwt = new JsonWebToken(body.AccessToken);
         Assert.Equal(UsersApiFactory.JwtIssuer, jwt.Issuer);
         Assert.Equal(email, jwt.GetClaim("email").Value);
-        Assert.Equal("Seller", jwt.GetClaim("role").Value);
+        Assert.Equal(["Buyer"], jwt.Claims.Where(c => c.Type == "role").Select(c => c.Value));
         Assert.True(Guid.TryParse(jwt.Subject, out _));
     }
 
@@ -78,13 +78,15 @@ public class LoginTests(UsersApiFactory factory)
     [Fact]
     public async Task Me_returns_the_authenticated_user()
     {
-        var (client, userId, email, _) = await factory.CreateAuthenticatedClient(role: "Seller");
+        var (client, userId, email, _) = await factory.CreateAuthenticatedClient(seller: true);
 
         var response = await client.GetAsync("/users/me");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var me = await response.Content.ReadFromJsonAsync<MeResponse>();
-        Assert.Equal(new MeResponse(userId, email, "Test User", "Seller"), me);
+        Assert.NotNull(me);
+        Assert.Equal((userId, email, "Test User"), (me.Id, me.Email, me.Name));
+        Assert.Equal(["Buyer", "Seller"], me.Roles);
     }
 
     [Fact]

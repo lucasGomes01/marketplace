@@ -21,7 +21,7 @@ public class JwtTokenIssuerTests
     private static AccessToken Issue(JwtOptions? options = null, DateTimeOffset? now = null) =>
         new JwtTokenIssuer(Microsoft.Extensions.Options.Options.Create(options ?? Options()),
                 new FakeTimeProvider(now ?? DateTimeOffset.UtcNow))
-            .Issue(UserId, "maria@example.com", "Seller");
+            .Issue(UserId, "maria@example.com", ["Buyer", "Seller"]);
 
     private static Task<Microsoft.IdentityModel.Tokens.TokenValidationResult> Validate(AccessToken token, JwtOptions? options = null) =>
         new JsonWebTokenHandler().ValidateTokenAsync(token.Value, JwtValidation.CreateParameters(options ?? Options()));
@@ -35,7 +35,9 @@ public class JwtTokenIssuerTests
         var principal = new ClaimsPrincipal(result.ClaimsIdentity);
         Assert.Equal(UserId, principal.GetUserId());
         Assert.Equal("maria@example.com", principal.FindFirstValue(MarketplaceClaims.Email));
+        Assert.True(principal.IsInRole("Buyer"));
         Assert.True(principal.IsInRole("Seller"));
+        Assert.False(principal.IsInRole("Admin"));
     }
 
     [Fact]

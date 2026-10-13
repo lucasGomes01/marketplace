@@ -11,18 +11,16 @@ public class UserTests
     private User Register(
         string email = "maria@example.com",
         string name = "Maria Silva",
-        UserRole role = UserRole.Buyer,
         string passwordHash = "hashed-password") =>
-        User.Register(email, name, role, passwordHash, _clock);
+        User.Register(email, name, passwordHash, _clock);
 
     [Fact]
     public void Register_creates_user_with_given_data()
     {
-        var user = Register(email: " Maria@Example.com ", name: "  Maria Silva ", role: UserRole.Seller);
+        var user = Register(email: " Maria@Example.com ", name: "  Maria Silva ");
 
         Assert.Equal("maria@example.com", user.Email.Value);
         Assert.Equal("Maria Silva", user.Name);
-        Assert.Equal(UserRole.Seller, user.Role);
         Assert.Equal("hashed-password", user.PasswordHash);
     }
 
@@ -39,6 +37,41 @@ public class UserTests
     public void Each_registered_user_gets_a_different_id()
     {
         Assert.NotEqual(Register().Id, Register().Id);
+    }
+
+    [Fact]
+    public void A_new_account_can_buy_but_not_sell()
+    {
+        var user = Register();
+
+        Assert.False(user.IsSeller);
+        Assert.Null(user.SellerSince);
+        Assert.Equal([UserRole.Buyer], user.Roles);
+    }
+
+    [Fact]
+    public void Becoming_a_seller_keeps_buying_and_records_when()
+    {
+        var user = Register();
+        _clock.Advance(TimeSpan.FromDays(3));
+
+        user.BecomeSeller(_clock);
+
+        Assert.True(user.IsSeller);
+        Assert.Equal(Now.AddDays(3), user.SellerSince);
+        Assert.Equal([UserRole.Buyer, UserRole.Seller], user.Roles);
+    }
+
+    [Fact]
+    public void Becoming_a_seller_twice_keeps_the_original_date()
+    {
+        var user = Register();
+        user.BecomeSeller(_clock);
+        _clock.Advance(TimeSpan.FromDays(10));
+
+        user.BecomeSeller(_clock);
+
+        Assert.Equal(Now, user.SellerSince);
     }
 
     [Fact]
@@ -62,17 +95,10 @@ public class UserTests
     }
 
     [Fact]
-    public void Register_with_undefined_role_throws_domain_exception()
-    {
-        Assert.Throws<DomainException>(() => Register(role: (UserRole)99));
-    }
-
-    [Fact]
     public void Domain_exception_identifies_the_invalid_field()
     {
         Assert.Equal("email", Assert.Throws<DomainException>(() => Register(email: "x")).Field);
         Assert.Equal("name", Assert.Throws<DomainException>(() => Register(name: "")).Field);
-        Assert.Equal("role", Assert.Throws<DomainException>(() => Register(role: (UserRole)99)).Field);
     }
 
     [Theory]

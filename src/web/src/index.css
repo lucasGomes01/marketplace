@@ -268,53 +268,6 @@ a {
   color: var(--danger);
 }
 
-.role-picker {
-  border: 0;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.role-picker legend {
-  margin-bottom: 6px;
-}
-
-.role-option {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.role-option:has(input:checked) {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-}
-
-.role-option input {
-  margin-top: 4px;
-  accent-color: var(--primary);
-}
-
-.role-option span {
-  display: grid;
-}
-
-.role-option small {
-  color: var(--text-muted);
-}
-
-@media (max-width: 420px) {
-  .role-picker {
-    grid-template-columns: 1fr;
-  }
-}
-
 .alert {
   margin-top: 16px;
   padding: 12px 14px;
@@ -327,12 +280,39 @@ a {
   color: var(--danger);
 }
 
+.alert--success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
 .alert--error a {
   color: inherit;
   font-weight: 600;
 }
 
 /* Minha conta */
+.callout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px dashed var(--primary);
+  border-radius: var(--radius);
+  background: var(--primary-soft);
+}
+
+.callout h2 {
+  font-size: 1.05rem;
+  margin: 0 0 2px;
+}
+
+.callout p {
+  margin: 0;
+}
+
 .details {
   margin: 20px 0 0;
   display: grid;

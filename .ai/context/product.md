@@ -8,13 +8,17 @@ de vários vendedores e fecham um pedido. A plataforma intermedia a venda (e, no
 > Quando for definido, atualize este arquivo e registre a decisão em `decisions/`.
 
 ## Personas
-- **Comprador (Buyer):** navega, adiciona ao carrinho, finaliza o pedido, acompanha os pedidos.
-- **Vendedor (Seller):** cadastra e gerencia produtos e estoque, vê os pedidos que contêm seus itens.
+> **Uma conta só** (T-019): toda conta compra; vender é um perfil que a pessoa ativa em "Minha conta" →
+> "Começar a vender". Os papéis abaixo são capacidades da mesma conta, não tipos de conta diferentes.
+
+- **Comprador (Buyer):** toda conta. Navega, adiciona ao carrinho, finaliza o pedido, acompanha os pedidos.
+- **Vendedor (Seller):** contas com o perfil de vendedor ativo. Cadastra e gerencia produtos e estoque, vê os
+  pedidos que contêm seus itens. Continua podendo comprar.
 - **Admin:** (pós-MVP) modera vendedores e produtos.
 
 ## Fluxo do MVP (objetivo inicial)
 **usuário → produto → carrinho → pedido**
-1. A pessoa se cadastra como comprador ou vendedor e faz login (JWT).
+1. A pessoa se cadastra e faz login (JWT). Para vender, ativa o perfil de vendedor na própria conta.
 2. O vendedor cadastra um produto (nome, descrição, preço, estoque).
 3. O comprador lista e vê produtos e adiciona ao carrinho.
 4. O comprador faz checkout → pedido criado com snapshot dos preços → estoque baixado → carrinho limpo.
@@ -27,8 +31,8 @@ disputas · notificações · imagens de produto.
 ## Glossário
 | Termo | Significado |
 |---|---|
-| Seller / Vendedor | Usuário com papel `Seller`; dono de produtos |
-| Buyer / Comprador | Usuário com papel `Buyer`; dono de carrinho e pedidos |
+| Seller / Vendedor | Conta com o perfil de vendedor ativo (papel `Seller` no token); dona de produtos |
+| Buyer / Comprador | Toda conta (papel `Buyer` sempre presente); dona de carrinho e pedidos |
 | Product | Item à venda de um Seller. Preço em `Money` (decimal + moeda BRL) |
 | Cart | Carrinho de um Buyer. Um carrinho ativo por Buyer |
 | Checkout | Ação de transformar o carrinho em pedido |

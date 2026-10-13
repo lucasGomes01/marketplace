@@ -2,6 +2,11 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-019 Conta única
+- Toda conta compra; "Começar a vender" (`POST /api/users/me/seller`) ativa o perfil de vendedor e devolve token novo.
+- Token com um claim `role` por papel. Migration converte `Role=Seller` → `IsSeller` (testada). Cadastro sem tipo de conta.
+- Próxima: **T-006** (Catalog API em camadas; `POST /products` exige policy `Seller`).
+
 ## 2026-10-13 — T-018 Camadas SOLID
 - Users agora em Domain / Application / Infrastructure / Api (ADR-004). Casos de uso = `IHandler<,>` → `Result<T>`; portas em `Abstractions/`.
 - Novos `BuildingBlocks.Application` e `BuildingBlocks.Api`; testes de arquitetura garantem a regra de dependência.

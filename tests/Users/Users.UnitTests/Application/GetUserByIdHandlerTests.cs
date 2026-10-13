@@ -12,12 +12,14 @@ public class GetUserByIdHandlerTests
     [Fact]
     public async Task Returns_the_user()
     {
-        var user = User.Register("maria@example.com", "Maria", UserRole.Buyer, "hash", new FakeTimeProvider());
+        var user = User.Register("maria@example.com", "Maria", "hash", new FakeTimeProvider());
         _repository.Users.Add(user);
 
         var result = await new GetUserByIdHandler(_repository).HandleAsync(new GetUserByIdQuery(user.Id));
 
-        Assert.Equal(new Users.Application.UserResponse(user.Id, "maria@example.com", "Maria", UserRole.Buyer), result.Value);
+        Assert.Equal(user.Id, result.Value.Id);
+        Assert.Equal("maria@example.com", result.Value.Email);
+        Assert.Equal([UserRole.Buyer], result.Value.Roles);
     }
 
     [Fact]

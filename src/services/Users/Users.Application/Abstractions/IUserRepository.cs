@@ -11,6 +11,9 @@ public interface IUserRepository
 
     Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken);
 
+    /// <summary>Grava alterações de um usuário já existente.</summary>
+    Task UpdateAsync(User user, CancellationToken cancellationToken);
+
     /// <summary>Grava o usuário.</summary>
     /// <exception cref="DuplicateEmailException">Outro usuário com o mesmo email foi gravado antes (corrida).</exception>
     Task AddAsync(User user, CancellationToken cancellationToken);

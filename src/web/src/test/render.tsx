@@ -4,17 +4,20 @@ import { MemoryRouter } from 'react-router'
 import { AppRoutes } from '../App'
 import { AuthProvider } from '../auth/AuthProvider'
 import { saveSession } from '../auth/session'
-import { validToken } from './server'
+import { buyerToken, validToken } from './server'
 
 interface Options {
-  /** Começa com uma sessão válida salva (como se a pessoa já tivesse feito login). */
-  loggedIn?: boolean
+  /**
+   * Começa com uma sessão salva (como se a pessoa já tivesse feito login).
+   * true = conta que compra e vende; 'buyer' = conta que só compra.
+   */
+  loggedIn?: boolean | 'buyer'
 }
 
 /** Renderiza a aplicação inteira numa rota, com a API falsa do MSW. */
 export function renderApp(route = '/', { loggedIn = false }: Options = {}) {
   if (loggedIn) {
-    saveSession({ accessToken: validToken, expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() })
+    saveSession({ accessToken: loggedIn === 'buyer' ? buyerToken : validToken, expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() })
   }
 
   return {

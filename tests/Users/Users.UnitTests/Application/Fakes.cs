@@ -20,6 +20,14 @@ internal sealed class InMemoryUserRepository : IUserRepository
     public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(Users.SingleOrDefault(u => u.Id == id));
 
+    public int Updates { get; private set; }
+
+    public Task UpdateAsync(User user, CancellationToken cancellationToken)
+    {
+        Updates++;
+        return Task.CompletedTask;
+    }
+
     public Task AddAsync(User user, CancellationToken cancellationToken)
     {
         if (SimulateDuplicateOnAdd)
@@ -46,11 +54,11 @@ internal sealed class FakePasswordHasher : IPasswordHasher
 
 internal sealed class FakeTokenIssuer(TimeProvider clock) : ITokenIssuer
 {
-    public (Guid UserId, string Email, UserRole Role)? LastIssued { get; private set; }
+    public (Guid UserId, string Email, UserRole[] Roles)? LastIssued { get; private set; }
 
-    public IssuedToken Issue(Guid userId, string email, UserRole role)
+    public IssuedToken Issue(Guid userId, string email, IReadOnlyCollection<UserRole> roles)
     {
-        LastIssued = (userId, email, role);
+        LastIssued = (userId, email, roles.ToArray());
         return new IssuedToken($"token-for-{userId}", clock.GetUtcNow().AddHours(1));
     }
 }

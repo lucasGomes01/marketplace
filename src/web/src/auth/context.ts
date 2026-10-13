@@ -11,6 +11,8 @@ export interface AuthContextValue {
   state: AuthState
   login: (email: string, password: string) => Promise<void>
   logout: () => void
+  /** Ativa o perfil de vendedor e troca a sessão pelo token novo (com o papel Seller). */
+  becomeSeller: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

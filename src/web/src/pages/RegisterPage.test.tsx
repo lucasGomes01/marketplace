@@ -6,14 +6,11 @@ import { existingUser, server } from '../test/server'
 
 async function fillForm(
   user: ReturnType<typeof renderApp>['user'],
-  { name = 'Maria Silva', email = existingUser.email, password = existingUser.password, seller = true } = {},
+  { name = 'Maria Silva', email = existingUser.email, password = existingUser.password } = {},
 ) {
   await user.type(screen.getByLabelText('Nome'), name)
   await user.type(screen.getByLabelText('Email'), email)
   await user.type(screen.getByLabelText('Senha'), password)
-  if (seller) {
-    await user.click(screen.getByLabelText(/Vendedor/))
-  }
 }
 
 describe('RegisterPage', () => {
@@ -22,7 +19,7 @@ describe('RegisterPage', () => {
     server.use(
       http.post('/api/users', async ({ request }) => {
         registered = await request.json()
-        return HttpResponse.json({ id: existingUser.id, email: existingUser.email, name: 'Maria Silva', role: 'Seller' }, { status: 201 })
+        return HttpResponse.json({ id: existingUser.id, email: existingUser.email, name: 'Maria Silva', roles: ['Buyer'], sellerSince: null }, { status: 201 })
       }),
     )
     const { user } = renderApp('/cadastro')
@@ -31,24 +28,14 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: 'Criar conta' }))
 
     expect(await screen.findByRole('heading', { name: 'Minha conta' })).toBeInTheDocument()
-    expect(registered).toEqual({ name: 'Maria Silva', email: existingUser.email, password: existingUser.password, role: 'Seller' })
+    expect(registered).toEqual({ name: 'Maria Silva', email: existingUser.email, password: existingUser.password })
   })
 
-  it('creates a buyer account by default', async () => {
-    let role: string | undefined
-    server.use(
-      http.post('/api/users', async ({ request }) => {
-        role = ((await request.json()) as { role: string }).role
-        return HttpResponse.json({}, { status: 201 })
-      }),
-    )
-    const { user } = renderApp('/cadastro')
+  it('does not ask for an account type (every account can buy; selling is enabled later)', () => {
+    renderApp('/cadastro')
 
-    await fillForm(user, { seller: false })
-    await user.click(screen.getByRole('button', { name: 'Criar conta' }))
-
-    await screen.findByRole('heading', { name: 'Minha conta' })
-    expect(role).toBe('Buyer')
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Tipo de conta/)).not.toBeInTheDocument()
   })
 
   it('shows validation errors below each field', async () => {

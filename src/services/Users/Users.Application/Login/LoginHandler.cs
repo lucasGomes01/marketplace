@@ -43,7 +43,7 @@ public sealed class LoginHandler(IUserRepository users, IPasswordHasher hasher, 
             return InvalidCredentials;
         }
 
-        var token = tokens.Issue(user.Id, user.Email.Value, user.Role);
+        var token = tokens.Issue(user.Id, user.Email.Value, user.Roles);
         return new LoginResponse(token.Value, token.ExpiresAt);
     }
 

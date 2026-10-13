@@ -47,7 +47,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: 'anonymous', user: null, token: null, loggedOut: true })
   }, [])
 
-  const value = useMemo<AuthContextValue>(() => ({ state, login, logout }), [state, login, logout])
+  const becomeSeller = useCallback(async () => {
+    if (state.status !== 'authenticated') {
+      throw new Error('becomeSeller requires an authenticated session.')
+    }
+    const result = await usersApi.becomeSeller(state.token)
+    saveSession({ accessToken: result.accessToken, expiresAt: result.expiresAt })
+    setState({ status: 'authenticated', user: result.user, token: result.accessToken })
+  }, [state])
+
+  const value = useMemo<AuthContextValue>(
+    () => ({ state, login, logout, becomeSeller }),
+    [state, login, logout, becomeSeller],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

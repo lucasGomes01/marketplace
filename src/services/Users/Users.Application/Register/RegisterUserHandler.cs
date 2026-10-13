@@ -4,7 +4,8 @@ using Users.Domain;
 
 namespace Users.Application.Register;
 
-public sealed record RegisterUserCommand(string? Email, string? Name, string? Password, string? Role);
+/// <summary>Toda conta nasce compradora; vender é ativado depois (BecomeSeller).</summary>
+public sealed record RegisterUserCommand(string? Email, string? Name, string? Password);
 
 public sealed class RegisterUserHandler(IUserRepository users, IPasswordHasher hasher, TimeProvider clock)
     : IHandler<RegisterUserCommand, UserResponse>
@@ -17,28 +18,17 @@ public sealed class RegisterUserHandler(IUserRepository users, IPasswordHasher h
     public async Task<Result<UserResponse>> HandleAsync(
         RegisterUserCommand command, CancellationToken cancellationToken = default)
     {
-        // Regras da aplicação (a senha em texto puro nunca chega ao domínio).
-        var errors = new List<Error>();
+        // Regra da aplicação (a senha em texto puro nunca chega ao domínio).
         if ((command.Password?.Length ?? 0) < PasswordMinLength)
         {
-            errors.Add(Error.Validation("password", "password.too_short",
-                $"Password must have at least {PasswordMinLength} characters."));
-        }
-        if (!Enum.GetNames<UserRole>().Contains(command.Role, StringComparer.OrdinalIgnoreCase))
-        {
-            errors.Add(Error.Validation("role", "role.invalid",
-                $"Role must be one of: {string.Join(", ", Enum.GetNames<UserRole>())}."));
-        }
-        if (errors.Count > 0)
-        {
-            return Result<UserResponse>.Failure(errors);
+            return Error.Validation("password", "password.too_short",
+                $"Password must have at least {PasswordMinLength} characters.");
         }
 
         User user;
         try
         {
-            var role = Enum.Parse<UserRole>(command.Role!, ignoreCase: true);
-            user = User.Register(command.Email!, command.Name!, role, hasher.Hash(command.Password!), clock);
+            user = User.Register(command.Email!, command.Name!, hasher.Hash(command.Password!), clock);
         }
         catch (DomainException ex)
         {

@@ -1,19 +1,55 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
+import type { Role } from '../api/users'
 
-/** Usuário "cadastrado" na API falsa. */
-export const existingUser = {
+interface FakeUser {
+  id: string
+  email: string
+  name: string
+  password: string
+  roles: Role[]
+  sellerSince: string | null
+}
+
+/** Conta que compra e vende. */
+export const existingUser: FakeUser = {
   id: '01a0edf9-3a0c-7243-8a4c-8db1e27c1be1',
   email: 'maria@example.com',
   name: 'Maria Silva',
-  role: 'Seller' as const,
   password: 'Sup3r-secret',
+  roles: ['Buyer', 'Seller'],
+  sellerSince: '2026-10-01T12:00:00Z',
+}
+
+/** Conta que só compra (pode ativar o perfil de vendedor). */
+export const buyerUser: FakeUser = {
+  id: '01a0edf9-3a0c-7243-8a4c-8db1e27c1be2',
+  email: 'joao@example.com',
+  name: 'João Souza',
+  password: 'Sup3r-secret',
+  roles: ['Buyer'],
+  sellerSince: null,
 }
 
 export const validToken = 'valid-token'
+export const buyerToken = 'buyer-token'
 
-const invalidCredentials = () =>
-  HttpResponse.json({ status: 401, title: 'Invalid email or password.' }, { status: 401 })
+const inOneHour = () => new Date(Date.now() + 60 * 60 * 1000).toISOString()
+
+/** Estado da API falsa; recriado a cada teste em `resetFakeApi`. */
+let tokens = new Map<string, FakeUser>()
+
+export function resetFakeApi() {
+  tokens = new Map([
+    [validToken, { ...existingUser }],
+    [buyerToken, { ...buyerUser, roles: [...buyerUser.roles] }],
+  ])
+}
+resetFakeApi()
+
+const publicUser = ({ password: _password, ...user }: FakeUser) => user
+
+const userFrom = (request: Request) => tokens.get(request.headers.get('Authorization')?.replace('Bearer ', '') ?? '')
 
 /**
  * Handlers padrão: imitam o contrato real da API (via gateway).
@@ -23,32 +59,46 @@ export const handlers = [
   http.post('/api/users', async ({ request }) => {
     const body = (await request.json()) as Record<string, string>
     if (body.email?.trim().toLowerCase() === existingUser.email) {
-      return HttpResponse.json({ status: 409, title: 'Email already registered.' }, { status: 409 })
+      return HttpResponse.json(
+        { status: 409, title: 'Email already registered.', code: 'email.already_registered' },
+        { status: 409 },
+      )
     }
     return HttpResponse.json(
-      { id: crypto.randomUUID(), email: body.email.trim().toLowerCase(), name: body.name.trim(), role: body.role },
+      { id: crypto.randomUUID(), email: body.email.trim().toLowerCase(), name: body.name.trim(), roles: ['Buyer'], sellerSince: null },
       { status: 201 },
     )
   }),
 
   http.post('/api/auth/login', async ({ request }) => {
     const body = (await request.json()) as Record<string, string>
-    if (body.email?.trim().toLowerCase() !== existingUser.email || body.password !== existingUser.password) {
-      return invalidCredentials()
+    const entry = [...tokens.entries()].find(
+      ([, user]) => user.email === body.email?.trim().toLowerCase() && user.password === body.password,
+    )
+    if (!entry) {
+      return HttpResponse.json({ status: 401, title: 'Invalid email or password.' }, { status: 401 })
     }
-    return HttpResponse.json({
-      accessToken: validToken,
-      tokenType: 'Bearer',
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-    })
+    return HttpResponse.json({ accessToken: entry[0], tokenType: 'Bearer', expiresAt: inOneHour() })
   }),
 
   http.get('/api/users/me', ({ request }) => {
-    if (request.headers.get('Authorization') !== `Bearer ${validToken}`) {
+    const user = userFrom(request)
+    return user ? HttpResponse.json(publicUser(user)) : new HttpResponse(null, { status: 401 })
+  }),
+
+  http.post('/api/users/me/seller', ({ request }) => {
+    const user = userFrom(request)
+    if (!user) {
       return new HttpResponse(null, { status: 401 })
     }
-    const { password: _password, ...user } = existingUser
-    return HttpResponse.json(user)
+    const seller: FakeUser = {
+      ...user,
+      roles: ['Buyer', 'Seller'],
+      sellerSince: user.sellerSince ?? new Date().toISOString(),
+    }
+    const newToken = `seller-token-${user.id}`
+    tokens.set(newToken, seller)
+    return HttpResponse.json({ user: publicUser(seller), accessToken: newToken, tokenType: 'Bearer', expiresAt: inOneHour() })
   }),
 ]
 

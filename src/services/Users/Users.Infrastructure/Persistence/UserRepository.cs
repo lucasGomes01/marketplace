@@ -19,6 +19,12 @@ internal sealed class UserRepository(UsersDbContext db) : IUserRepository
     public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken) =>
         db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == id, cancellationToken);
 
+    public async Task UpdateAsync(User user, CancellationToken cancellationToken)
+    {
+        db.Users.Update(user);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task AddAsync(User user, CancellationToken cancellationToken)
     {
         db.Users.Add(user);

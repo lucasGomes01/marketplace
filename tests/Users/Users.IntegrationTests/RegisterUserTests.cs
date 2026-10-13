@@ -11,22 +11,19 @@ public class RegisterUserTests(UsersApiFactory factory)
 {
     private readonly HttpClient _client = factory.CreateClient();
 
-    private static object ValidRequest(string? email = null, string name = "Maria Silva",
-        string password = "Sup3r-secret", string role = "Buyer") => new
+    private static object ValidRequest(string? email = null, string name = "Maria Silva", string password = "Sup3r-secret") => new
     {
         email = email ?? $"user-{Guid.NewGuid():N}@example.com",
         name,
         password,
-        role,
     };
 
-    private record UserResponse(Guid Id, string Email, string Name, string Role);
+    private record UserResponse(Guid Id, string Email, string Name, string[] Roles, DateTimeOffset? SellerSince);
 
     [Fact]
-    public async Task Register_returns_201_with_user_and_location()
+    public async Task Register_returns_201_with_a_buyer_account_and_location()
     {
-        var response = await _client.PostAsJsonAsync("/users",
-            ValidRequest(email: " Nova.Pessoa@Example.com ", role: "Seller"));
+        var response = await _client.PostAsJsonAsync("/users", ValidRequest(email: " Nova.Pessoa@Example.com "));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<UserResponse>();
@@ -34,7 +31,8 @@ public class RegisterUserTests(UsersApiFactory factory)
         Assert.NotEqual(Guid.Empty, body.Id);
         Assert.Equal("nova.pessoa@example.com", body.Email);
         Assert.Equal("Maria Silva", body.Name);
-        Assert.Equal("Seller", body.Role);
+        Assert.Equal(["Buyer"], body.Roles);
+        Assert.Null(body.SellerSince);
         Assert.Equal($"/users/{body.Id}", response.Headers.Location?.OriginalString);
     }
 
@@ -69,13 +67,12 @@ public class RegisterUserTests(UsersApiFactory factory)
     }
 
     [Theory]
-    [InlineData("not-an-email", "Maria", "Sup3r-secret", "Buyer")]
-    [InlineData(null, "   ", "Sup3r-secret", "Buyer")]
-    [InlineData(null, "Maria", "Sup3r-secret", "Admin")]
-    [InlineData(null, "Maria", "short", "Buyer")]
-    public async Task Invalid_data_returns_400_validation_problem(string? email, string name, string password, string role)
+    [InlineData("not-an-email", "Maria", "Sup3r-secret")]
+    [InlineData(null, "   ", "Sup3r-secret")]
+    [InlineData(null, "Maria", "short")]
+    public async Task Invalid_data_returns_400_validation_problem(string? email, string name, string password)
     {
-        var response = await _client.PostAsJsonAsync("/users", ValidRequest(email, name, password, role));
+        var response = await _client.PostAsJsonAsync("/users", ValidRequest(email, name, password));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();

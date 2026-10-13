@@ -11,7 +11,6 @@ const translations: Array<[field: string, pattern: RegExp, text: string]> = [
   ['name', /at most/i, 'O nome pode ter no máximo 100 caracteres.'],
   ['password', /required/i, 'Informe sua senha.'],
   ['password', /at least 8/i, 'A senha precisa ter pelo menos 8 caracteres.'],
-  ['role', /./, 'Escolha o tipo de conta.'],
 ]
 
 export function translateFieldErrors(errors: FieldErrors): FieldErrors {

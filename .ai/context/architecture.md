@@ -68,7 +68,8 @@ internal/messaging/       consumer/producer Kafka (franz-go)
 
 ## Autenticação
 O Users emite o JWT (HS256 no MVP; chave em config). Cada serviço valida o JWT (mesma chave e issuer).
-Claims: `sub` (userId), `email`, `role` (`Buyer`|`Seller`).
+Claims: `sub` (userId), `email`, `role` — **um claim por papel ativo** (`["Buyer"]` ou `["Buyer","Seller"]`).
+Ao ativar o perfil de vendedor (`POST /api/users/me/seller`) a resposta traz um token novo com o papel `Seller`.
 
 Tudo vive em `src/building-blocks/BuildingBlocks.Auth`. Para proteger um serviço .NET:
 ```csharp

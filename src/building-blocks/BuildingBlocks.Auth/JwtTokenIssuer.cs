@@ -12,7 +12,8 @@ public sealed class JwtTokenIssuer(IOptions<JwtOptions> options, TimeProvider cl
 {
     private static readonly JsonWebTokenHandler Handler = new();
 
-    public AccessToken Issue(Guid userId, string email, string role)
+    /// <summary>Emite o token com um claim <c>role</c> para cada papel ativo.</summary>
+    public AccessToken Issue(Guid userId, string email, IEnumerable<string> roles)
     {
         var jwt = options.Value;
         var now = clock.GetUtcNow();
@@ -29,8 +30,8 @@ public sealed class JwtTokenIssuer(IOptions<JwtOptions> options, TimeProvider cl
             [
                 new Claim(MarketplaceClaims.UserId, userId.ToString()),
                 new Claim(MarketplaceClaims.Email, email),
-                new Claim(MarketplaceClaims.Role, role),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                .. roles.Select(role => new Claim(MarketplaceClaims.Role, role)),
             ]),
             SigningCredentials = new SigningCredentials(JwtValidation.CreateSigningKey(jwt), JwtValidation.Algorithm),
         });

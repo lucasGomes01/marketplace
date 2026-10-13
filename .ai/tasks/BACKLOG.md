@@ -27,12 +27,13 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 |---|---|---|---|---|
 | T-017 | Trocar RabbitMQ por Kafka (KRaft, tópicos declarados, Kafka UI) — ADR-003 | Infra | T-013 | done |
 | T-018 | SOLID: camadas Domain/Application/Infrastructure/Api, começando pelo Users — ADR-004 | Users | T-017 | done |
+| T-019 | Conta única: toda conta compra; "Começar a vender" ativa o perfil de vendedor na mesma conta | Users + Web | T-018 | done |
 
 ## Fase 2 — Produto
 | ID | Tarefa | Serviço | Depende | Status |
 |---|---|---|---|---|
 | T-005 | Domínio `Product` + value object `Money` (preço > 0, estoque ≥ 0, dono Seller) | Catalog | T-001 | done |
-| T-006 | `POST /products` (só Seller), `GET /products` (paginado), `GET /products/{id}` — já nas camadas do ADR-004 (criar `Catalog.Application`/`Catalog.Infrastructure`) | Catalog | T-004, T-005, T-018 | todo |
+| T-006 | `POST /products` (só Seller), `GET /products` (paginado), `GET /products/{id}` — já nas camadas do ADR-004 (criar `Catalog.Application`/`Catalog.Infrastructure`) | Catalog | T-004, T-005, T-019 | todo |
 | T-014 | **Telas:** lista e detalhe de produtos; cadastro de produto (Seller). "Adicionar ao carrinho" entra na T-014b | Web | T-006, T-013 | todo |
 
 ## Fase 3 — Carrinho

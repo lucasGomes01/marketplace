@@ -58,6 +58,6 @@ public class ArchitectureTests
             .Select(t => t.Name)
             .Order();
 
-        Assert.Equal(["GetUserByIdHandler", "LoginHandler", "RegisterUserHandler"], handlers);
+        Assert.Equal(["BecomeSellerHandler", "GetUserByIdHandler", "LoginHandler", "RegisterUserHandler"], handlers);
     }
 }

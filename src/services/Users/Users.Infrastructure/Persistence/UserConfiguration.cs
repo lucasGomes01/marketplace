@@ -19,7 +19,8 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasIndex(u => u.Email).IsUnique();
 
         builder.Property(u => u.Name).HasMaxLength(User.NameMaxLength).IsRequired();
-        builder.Property(u => u.Role).HasConversion<string>().HasMaxLength(20);
+        // Roles é calculado a partir de IsSeller; não vira coluna.
+        builder.Ignore(u => u.Roles);
         builder.Property(u => u.PasswordHash).HasMaxLength(512).IsRequired();
     }
 }
