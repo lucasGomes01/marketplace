@@ -46,7 +46,7 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 ## Fase 4 — Pedido
 | ID | Tarefa | Serviço | Depende | Status |
 |---|---|---|---|---|
-| T-009 | Domínio `Order` em Go + máquina de status (Pending → Confirmed/Rejected) | Orders | T-001 | todo |
+| T-009 | Domínio `Order` em Go + máquina de status (Pending → Confirmed/Rejected) | Orders | T-001 | done |
 | T-010 | BuildingBlocks.Messaging (producer/consumer Kafka + envelope, `IEventPublisher`) e `POST /cart/checkout` publicando `cart.checked-out` | Cart | T-008 | todo |
 | T-011 | Orders consome `cart.checked-out` (franz-go), persiste no SQL Server, publica `order.placed`; `GET /orders` do comprador | Orders | T-009, T-010 | todo |
 | T-012 | Catalog baixa estoque em `order.placed` (idempotente) → `stock.reserved`/`stock.rejected`; Orders atualiza status; Cart limpa o carrinho | Catalog/Orders/Cart | T-011 | todo |

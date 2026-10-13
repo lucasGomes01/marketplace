@@ -2,6 +2,10 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-009 Domínio do pedido (Go)
+- `internal/order`: Order, Item, Money (centavos), status Pending→Confirmed|Rejected com transições idempotentes, UUID v7. 23 testes.
+- Próxima: **T-010** (BuildingBlocks.Messaging com Kafka + checkout publicando `cart.checked-out`).
+
 ## 2026-10-13 — T-014b Telas do carrinho
 - "Adicionar ao carrinho" na página do produto, tela `/carrinho` (± quantidade, remover, total) e contador no cabeçalho.
 - **Fase 3 (carrinho) concluída.** Próxima: **Fase 4 — pedido**: T-009 (domínio Order em Go) → T-010 (checkout publica no Kafka) → T-011 → T-012 → T-015.
