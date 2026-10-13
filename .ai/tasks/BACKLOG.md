@@ -22,6 +22,12 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | T-004b | Rotas do gateway por recurso (`/api/users`, `/api/auth`, `/api/products`...) — resolve I-07 | Gateway | T-004 | done |
 | T-013 | **Telas:** setup Vitest + Testing Library + MSW, cliente HTTP tipado, rotas; cadastro, login e "minha conta" | Web | T-004b | done |
 
+## Mudanças de arquitetura (2026-10-13)
+| ID | Tarefa | Serviço | Depende | Status |
+|---|---|---|---|---|
+| T-017 | Trocar RabbitMQ por Kafka (KRaft, tópicos declarados, Kafka UI) — ADR-003 | Infra | T-013 | done |
+| T-018 | SOLID: camadas Domain/Application/Infrastructure/Api, começando pelo Users — ADR-004 | Users | T-017 | todo |
+
 ## Fase 2 — Produto
 | ID | Tarefa | Serviço | Depende | Status |
 |---|---|---|---|---|
@@ -40,8 +46,8 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | ID | Tarefa | Serviço | Depende | Status |
 |---|---|---|---|---|
 | T-009 | Domínio `Order` em Go + máquina de status (Pending → Confirmed/Rejected) | Orders | T-001 | todo |
-| T-010 | BuildingBlocks.Messaging (publisher/consumer RabbitMQ + envelope) e `POST /cart/checkout` publicando `cart.checked_out` | Cart | T-008 | todo |
-| T-011 | Orders consome `cart.checked_out`, persiste no SQL Server, publica `order.placed`; `GET /orders` do comprador | Orders | T-009, T-010 | todo |
+| T-010 | BuildingBlocks.Messaging (producer/consumer Kafka + envelope, `IEventPublisher`) e `POST /cart/checkout` publicando `cart.checked-out` | Cart | T-008 | todo |
+| T-011 | Orders consome `cart.checked-out` (franz-go), persiste no SQL Server, publica `order.placed`; `GET /orders` do comprador | Orders | T-009, T-010 | todo |
 | T-012 | Catalog baixa estoque em `order.placed` (idempotente) → `stock.reserved`/`stock.rejected`; Orders atualiza status; Cart limpa o carrinho | Catalog/Orders/Cart | T-011 | todo |
 | T-015 | **Telas:** finalizar pedido (checkout) e "meus pedidos" com status | Web | T-012, T-014b | todo |
 

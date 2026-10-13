@@ -10,7 +10,7 @@ Ela descreve **o quê** construir, **como** construir e **em que ordem**.
 | `context/product.md` | Visão, personas, escopo do MVP, glossário |
 | `context/architecture.md` | Serviços, portas, comunicação, bancos |
 | `context/conventions.md` | Padrões de código, testes, commits, branches |
-| `context/events.md` | Contratos dos eventos no RabbitMQ (fonte da verdade) |
+| `context/events.md` | Tópicos e contratos dos eventos no Kafka (fonte da verdade) |
 | `tasks/BACKLOG.md` | Lista ordenada de tarefas e status |
 | `tasks/T-XXX-*.md` | Especificação detalhada de cada tarefa |
 | `tasks/_template.md` | Modelo para novas tarefas |

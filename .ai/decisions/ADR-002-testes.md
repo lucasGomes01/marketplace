@@ -5,7 +5,7 @@
 
 ## Decisão
 - Desenvolvimento orientado a testes (red → green → refactor) em todas as tarefas.
-- Testes de integração usam **dependências reais** (SQL Server, RabbitMQ) via Testcontainers,
+- Testes de integração usam **dependências reais** (SQL Server, Kafka) via Testcontainers,
   em vez de banco em memória ou mocks de DbContext.
 
 ## Porquê

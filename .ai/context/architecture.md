@@ -9,7 +9,7 @@
   Users :5001   Catalog :5002   Cart :5003     Orders :5004 (Go)
   UsersDb       CatalogDb       CartDb         OrdersDb         ← SQL Server (1 banco por serviço)
                     │               │               │
-                    └──────── RabbitMQ (exchange marketplace.events) ────────┘
+                    └──────── Kafka (um tópico por evento) ────────┘
 ```
 
 ## Serviços
@@ -19,7 +19,7 @@
 | Users | .NET 10 + EF Core | Cadastro, login, emissão de JWT | 5001 |
 | Catalog | .NET 10 + EF Core | Produtos e estoque | 5002 |
 | Cart | .NET 10 + EF Core | Carrinho do comprador, checkout | 5003 |
-| Orders | Go (stdlib + go-mssqldb + amqp091-go) | Pedidos e ciclo de vida | 5004 |
+| Orders | Go (stdlib + go-mssqldb + franz-go) | Pedidos e ciclo de vida | 5004 |
 | Web | React + TS + Vite | UI | 5173 |
 
 No Docker, cada serviço escuta em `8080`; o gateway é exposto em `localhost:5000`.
@@ -29,7 +29,7 @@ No Docker, cada serviço escuta em `8080`; o gateway é exposto em `localhost:50
 - `X.Api`: Minimal APIs, EF Core (DbContext, migrations) e mensageria. Organizado por feature
   (`Features/Products/CreateProduct.cs`), não por camada técnica.
 - `tests/X/X.UnitTests`: xUnit, domínio puro, rápido.
-- `tests/X/X.IntegrationTests`: `WebApplicationFactory` + **Testcontainers** (SQL Server e RabbitMQ reais).
+- `tests/X/X.IntegrationTests`: `WebApplicationFactory` + **Testcontainers** (SQL Server e Kafka reais).
 
 ## Orders (Go)
 ```
@@ -37,19 +37,20 @@ cmd/orders/main.go        wiring
 internal/order/           domínio (Order, status, regras): testes unitários
 internal/api/             handlers HTTP (net/http, roteamento do Go 1.22+)
 internal/store/           repositório SQL Server
-internal/messaging/       consumer/publisher RabbitMQ
+internal/messaging/       consumer/producer Kafka (franz-go)
 ```
 
 ## Comunicação
 - **Síncrona (HTTP):** só quando a resposta é necessária na hora.
   Ex.: o Cart consulta o Catalog para obter preço e estoque ao adicionar um item.
-- **Assíncrona (RabbitMQ):** para tudo que é consequência de um fato. Os contratos ficam em `events.md`.
-- Exchange `marketplace.events` (topic). Routing key = nome do evento (`cart.checked_out`).
-  Cada serviço tem sua própria fila (`orders.cart-checked-out`, `catalog.order-placed`...).
+- **Assíncrona (Kafka):** para tudo que é consequência de um fato. Tópicos, chaves e contratos em `events.md`.
+- Um tópico por tipo de evento (`cart.checked-out`, `order.placed`...). Chave = id do agregado (ordem por pedido).
+  Cada serviço consome com seu próprio consumer group (`orders-service`, `catalog-service`...).
+- Kafka UI em http://localhost:8080 para ver tópicos, mensagens e offsets dos grupos.
 - Consumidores devem ser **idempotentes** (guardar o `eventId` já processado).
 
 ## Fluxo de checkout (alvo do MVP)
-1. `POST /api/cart/checkout` → o Cart publica `cart.checked_out` (itens com snapshot de preço).
+1. `POST /api/cart/checkout` → o Cart publica `cart.checked-out` (itens com snapshot de preço).
 2. O Orders consome → cria `Order(Pending)` → publica `order.placed`.
 3. O Catalog consome `order.placed` → baixa o estoque → publica `stock.reserved` ou `stock.rejected`.
 4. O Orders consome → `Confirmed` ou `Rejected`. O Cart consome `order.placed` → limpa o carrinho.

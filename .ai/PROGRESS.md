@@ -2,6 +2,10 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-017 Kafka
+- RabbitMQ → Kafka 4.1 (KRaft). Tópicos declarados no `kafka-init`, auto-create desligado, Kafka UI em :8080. ADR-003.
+- Tópico `cart.checked-out` (com hífen). `BuildingBlocks.Messaging` agora referencia Confluent.Kafka. Próxima: **T-018** (camadas SOLID).
+
 ## 2026-10-13 — T-013 Telas de conta (front)
 - Backlog reorganizado: cada fase entrega backend **e** telas (T-014 após T-006, nova T-014b após T-008, T-015 após T-012).
 - Front com react-router, cliente HTTP tipado, sessão com JWT, telas Cadastro/Entrar/Minha conta + layout responsivo claro/escuro.

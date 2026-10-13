@@ -11,4 +11,4 @@ Antes de qualquer tarefa, leia `.ai/README.md` e siga o protocolo de trabalho de
 - Infra: `docker compose up -d` · tudo: `docker compose --profile apps up -d --build`
 
 ## Portas locais
-Gateway 5000 · Users 5001 · Catalog 5002 · Cart 5003 · Orders 5004 · Web 5173 · RabbitMQ UI 15672
+Gateway 5000 · Users 5001 · Catalog 5002 · Cart 5003 · Orders 5004 · Web 5173 · Kafka 9092 (localhost) · Kafka UI 8080

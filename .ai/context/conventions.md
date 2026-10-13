@@ -40,7 +40,7 @@
 
 ## Go
 - Stdlib primeiro. Dependências permitidas: `github.com/microsoft/go-mssqldb`,
-  `github.com/rabbitmq/amqp091-go`, `github.com/testcontainers/testcontainers-go`.
+  `github.com/twmb/franz-go` (Kafka), `github.com/testcontainers/testcontainers-go`.
 - `go vet` e `gofmt` limpos. Erros embrulhados com `fmt.Errorf("...: %w", err)`.
 - Testes table-driven quando houver variações.
 

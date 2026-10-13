@@ -1,7 +1,7 @@
 # Marketplace
 
 Marketplace multi-vendedor em microsserviços: **.NET 10**, **Go**, **React + TypeScript**, **SQL Server**,
-**RabbitMQ**, **YARP**, **Docker**. Desenvolvido com TDD e de forma incremental com apoio de IA (ver [`.ai/`](.ai/README.md)).
+**Kafka**, **YARP**, **Docker**. Desenvolvido com TDD e de forma incremental com apoio de IA (ver [`.ai/`](.ai/README.md)).
 
 ## Arquitetura
 Veja [`.ai/context/architecture.md`](.ai/context/architecture.md).
@@ -18,7 +18,7 @@ Veja [`.ai/context/architecture.md`](.ai/context/architecture.md).
 ## Rodando localmente
 ```bash
 cp .env.example .env
-docker compose up -d                           # SQL Server + RabbitMQ
+docker compose up -d                           # SQL Server + Kafka (UI em :8080)
 dotnet test                                    # testes .NET (precisa do Docker)
 cd src/web && npm install && npm run dev       # front
 ```

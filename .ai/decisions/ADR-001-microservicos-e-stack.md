@@ -12,7 +12,7 @@ entre serviços, mensageria, poliglotismo e testes de integração realistas.
 - Orders em **Go**, para exercitar um segundo ecossistema e provar que os contratos (HTTP e eventos) são
   independentes de linguagem.
 - **YARP** como API Gateway (mesmo ecossistema .NET, configuração por JSON).
-- **RabbitMQ** para eventos; **um banco por serviço** na mesma instância de SQL Server (isolamento lógico).
+- ~~RabbitMQ~~ → **Kafka** para eventos (substituído em 2026-10-13, ver ADR-003); **um banco por serviço** na mesma instância de SQL Server (isolamento lógico).
 
 ## Consequências
 - (+) Fronteiras claras, contratos explícitos em `context/events.md`.
