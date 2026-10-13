@@ -5,6 +5,7 @@ using BuildingBlocks.Auth;
 using Cart.Application;
 using Cart.Application.AddItem;
 using Cart.Application.ChangeQuantity;
+using Cart.Application.Checkout;
 using Cart.Application.GetCart;
 using Cart.Application.RemoveItem;
 
@@ -37,6 +38,12 @@ public static class CartEndpoints
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        cart.MapPost("/checkout", CheckoutAsync)
+            .WithName("Checkout")
+            .Produces<CheckoutResponse>(StatusCodes.Status202Accepted)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         cart.MapDelete("/items/{productId:guid}", RemoveAsync)
             .WithName("RemoveCartItem")
             .Produces<CartResponse>()
@@ -60,6 +67,18 @@ public static class CartEndpoints
     private static Task<IResult> RemoveAsync(
         Guid productId, ClaimsPrincipal user, IHandler<RemoveCartItemCommand, CartResponse> handler, CancellationToken ct) =>
         Run(user, buyerId => handler.HandleAsync(new RemoveCartItemCommand(buyerId, productId), ct));
+
+    /// <summary>202: o pedido é criado de forma assíncrona pelo Orders (acompanhe em <c>/api/orders/{orderId}</c>).</summary>
+    private static async Task<IResult> CheckoutAsync(
+        ClaimsPrincipal user, IHandler<CheckoutCommand, CheckoutResponse> handler, CancellationToken ct)
+    {
+        if (user.GetUserId() is not { } buyerId)
+        {
+            return Results.Unauthorized();
+        }
+        var result = await handler.HandleAsync(new CheckoutCommand(buyerId), ct);
+        return result.ToHttpResult(checkout => Results.Accepted($"/orders/{checkout.OrderId}", checkout));
+    }
 
     private static async Task<IResult> Run(ClaimsPrincipal user, Func<Guid, Task<Result<CartResponse>>> useCase)
     {

@@ -15,9 +15,11 @@ public sealed class ShoppingCart
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
-    public IReadOnlyList<CartItem> Items => _items;
+    /// <summary>Itens na ordem em que foram adicionados.</summary>
+    public IReadOnlyList<CartItem> Items => _items.OrderBy(i => i.Position).ToList();
 
     public string Currency => _items.Count > 0 ? _items[0].UnitPrice.Currency : Money.DefaultCurrency;
+
 
     public Money Total => _items.Aggregate(Money.Zero(Currency), (total, item) => total.Add(item.Subtotal));
 
@@ -65,7 +67,8 @@ public sealed class ShoppingCart
 
         if (existing is null)
         {
-            _items.Add(new CartItem(productId, sellerId, name, unitPrice, newQuantity));
+            var position = _items.Count == 0 ? 1 : _items.Max(i => i.Position) + 1;
+            _items.Add(new CartItem(productId, sellerId, name, unitPrice, newQuantity, position));
         }
         else
         {

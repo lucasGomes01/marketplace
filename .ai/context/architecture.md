@@ -62,10 +62,11 @@ internal/messaging/       consumer/producer Kafka (franz-go)
 - Consumidores devem ser **idempotentes** (guardar o `eventId` já processado).
 
 ## Fluxo de checkout (alvo do MVP)
-1. `POST /api/cart/checkout` → o Cart publica `cart.checked-out` (itens com snapshot de preço).
+1. `POST /api/cart/checkout` → o Cart publica `cart.checked-out` (itens com snapshot de preço) e esvazia o carrinho.
+   Responde `202 { checkoutId, orderId }` (o pedido nasce de forma assíncrona; `orderId` = `checkoutId`).
 2. O Orders consome → cria `Order(Pending)` → publica `order.placed`.
 3. O Catalog consome `order.placed` → baixa o estoque → publica `stock.reserved` ou `stock.rejected`.
-4. O Orders consome → `Confirmed` ou `Rejected`. O Cart consome `order.placed` → limpa o carrinho.
+4. O Orders consome → `Confirmed` ou `Rejected`.
 
 ## Autenticação
 O Users emite o JWT (HS256 no MVP; chave em config). Cada serviço valida o JWT (mesma chave e issuer).

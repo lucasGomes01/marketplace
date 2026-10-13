@@ -9,13 +9,17 @@ public sealed class CartItem
     public Money UnitPrice { get; private set; } = null!;
     public int Quantity { get; private set; }
 
+    /// <summary>Ordem em que o produto entrou no carrinho (o banco não garante ordem ao carregar).</summary>
+    public int Position { get; private set; }
+
     public Money Subtotal => UnitPrice.Multiply(Quantity);
 
     // Usado pelo EF Core.
     private CartItem() { }
 
-    internal CartItem(Guid productId, Guid sellerId, string productName, Money unitPrice, int quantity)
+    internal CartItem(Guid productId, Guid sellerId, string productName, Money unitPrice, int quantity, int position)
     {
+        Position = position;
         ProductId = productId;
         SellerId = sellerId;
         ProductName = productName;

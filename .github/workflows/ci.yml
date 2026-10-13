@@ -17,7 +17,14 @@ jobs:
       - run: dotnet restore
       - run: dotnet build --no-restore -c Release
       # Testes de integração usam Testcontainers; o runner ubuntu já tem Docker.
-      - run: dotnet test --no-build -c Release --logger "trx" --collect:"XPlat Code Coverage"
+      - run: dotnet test --no-build -c Release --logger "trx" --logger "console;verbosity=normal" --collect:"XPlat Code Coverage"
+      # Se falhar, guarda os resultados detalhados para investigar (ver ideia I-10 no BACKLOG).
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: dotnet-test-results
+          path: tests/**/TestResults/
+          retention-days: 7
 
   orders:
     name: Orders (Go)

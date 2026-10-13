@@ -1,3 +1,4 @@
+using BuildingBlocks.Messaging;
 using Cart.Application.Abstractions;
 using Cart.Infrastructure.Catalog;
 using Cart.Infrastructure.Persistence;
@@ -10,7 +11,10 @@ namespace Cart.Infrastructure;
 
 public static class DependencyInjection
 {
-    /// <summary>Configuração: <c>ConnectionStrings:Default</c> e <c>Services:Catalog</c> (URL base do Catalog).</summary>
+    /// <summary>
+    /// Configuração: <c>ConnectionStrings:Default</c>, <c>Services:Catalog</c> (URL base do Catalog) e
+    /// <c>Kafka:BootstrapServers</c>.
+    /// </summary>
     public static IServiceCollection AddCartInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContext<CartDbContext>(options =>
@@ -25,6 +29,7 @@ public static class DependencyInjection
             http.Timeout = TimeSpan.FromSeconds(5);
         });
 
+        services.AddKafkaEventPublisher(configuration);
         services.TryAddSingleton(TimeProvider.System);
         return services;
     }

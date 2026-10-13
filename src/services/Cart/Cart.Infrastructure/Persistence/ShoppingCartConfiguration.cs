@@ -38,6 +38,7 @@ internal sealed class ShoppingCartConfiguration : IEntityTypeConfiguration<Shopp
             });
             items.Navigation(i => i.UnitPrice).IsRequired();
         });
-        builder.Navigation(c => c.Items).UsePropertyAccessMode(PropertyAccessMode.Field);
+        // Items é calculado (ordenado por Position); o EF usa o campo _items.
+        builder.Navigation(c => c.Items).HasField("_items").UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

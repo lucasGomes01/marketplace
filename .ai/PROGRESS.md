@@ -2,6 +2,11 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-010 Checkout no Kafka
+- `POST /api/cart/checkout` publica `cart.checked-out` (checkoutId determinístico = id do pedido) e esvazia o carrinho; 503 se o Kafka cair.
+- `IEventPublisher` (porta) + `KafkaEventPublisher` (BuildingBlocks.Messaging). Bug de ordem dos itens corrigido (`Position`).
+- ⚠️ I-10: instabilidade intermitente nos testes de integração em paralelo, não reproduzida. Próxima: **T-011** (Orders consome em Go).
+
 ## 2026-10-13 — T-009 Domínio do pedido (Go)
 - `internal/order`: Order, Item, Money (centavos), status Pending→Confirmed|Rejected com transições idempotentes, UUID v7. 23 testes.
 - Próxima: **T-010** (BuildingBlocks.Messaging com Kafka + checkout publicando `cart.checked-out`).

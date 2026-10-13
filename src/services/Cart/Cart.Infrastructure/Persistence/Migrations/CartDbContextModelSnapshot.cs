@@ -60,6 +60,9 @@ namespace Cart.Infrastructure.Persistence.Migrations
                                 .ValueGeneratedOnAdd()
                                 .HasColumnType("uniqueidentifier");
 
+                            b1.Property<int>("Position")
+                                .HasColumnType("int");
+
                             b1.Property<string>("ProductName")
                                 .IsRequired()
                                 .HasMaxLength(120)

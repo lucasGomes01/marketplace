@@ -131,6 +131,21 @@ public class ShoppingCartTests
     }
 
     [Fact]
+    public void Items_keep_the_order_they_were_added_even_after_removals()
+    {
+        var cart = NewCart();
+        var third = Guid.CreateVersion7();
+        cart.AddItem(Drill, SellerA, "Furadeira", Money.Create(10m), 1, _clock);
+        cart.AddItem(Wrench, SellerB, "Chaves", Money.Create(5m), 1, _clock);
+        cart.RemoveItem(Drill, _clock);
+        cart.AddItem(third, SellerB, "Trena", Money.Create(5m), 1, _clock);
+        cart.AddItem(Wrench, SellerB, "Chaves", Money.Create(5m), 1, _clock); // somar não muda a posição
+
+        Assert.Equal(["Chaves", "Trena"], cart.Items.Select(i => i.ProductName));
+        Assert.True(cart.Items[0].Position < cart.Items[1].Position);
+    }
+
+    [Fact]
     public void Remove_item_takes_it_out_of_the_cart()
     {
         var cart = NewCart();

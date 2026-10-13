@@ -25,18 +25,21 @@ Decisão e porquês em `decisions/ADR-003-kafka.md`.
 | Tópico | Produtor | Consumidores (group) | Chave |
 |---|---|---|---|
 | `cart.checked-out` | Cart | `orders-service` | `cartId` |
-| `order.placed` | Orders | `catalog-service`, `cart-service` | `orderId` |
+| `order.placed` | Orders | `catalog-service` | `orderId` |
 | `stock.reserved` | Catalog | `orders-service` | `orderId` |
 | `stock.rejected` | Catalog | `orders-service` | `orderId` |
 
 ## cart.checked-out (Cart → Orders)
+Publicado por `POST /api/cart/checkout` (T-010). O carrinho é esvaziado logo depois de publicar.
+`checkoutId` é **determinístico** (derivado do carrinho e da sua última alteração) e é também o `eventId` e o
+**id do pedido**: repetir o checkout de um carrinho que não mudou não pode gerar dois pedidos (o Orders ignora id repetido).
 ```json
-{ "cartId": "guid", "buyerId": "guid",
+{ "checkoutId": "guid", "cartId": "guid", "buyerId": "guid",
   "items": [ { "productId": "guid", "sellerId": "guid", "productName": "string",
                "unitPrice": 10.50, "currency": "BRL", "quantity": 2 } ] }
 ```
 
-## order.placed (Orders → Catalog, Cart)
+## order.placed (Orders → Catalog)
 ```json
 { "orderId": "guid", "buyerId": "guid", "cartId": "guid",
   "items": [ { "productId": "guid", "quantity": 2 } ] }
