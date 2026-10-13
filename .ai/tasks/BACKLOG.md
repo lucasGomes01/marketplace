@@ -16,6 +16,7 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | T-002 | Domínio `User` (email válido, papel Buyer/Seller, hash de senha) | Users | T-001 | done |
 | T-003 | `POST /users` (cadastro) com EF Core + migration + teste de integração com Testcontainers | Users | T-002 | done |
 | T-004 | `POST /auth/login` → JWT; lib de validação JWT compartilhada entre os serviços | Users | T-003 | done |
+| T-004b | Rotas do gateway por recurso (`/api/users`, `/api/auth`, `/api/products`...) — resolve I-07 | Gateway | T-004 | done |
 
 ## Fase 2 — Produto
 | ID | Tarefa | Serviço | Depende | Status |
@@ -55,4 +56,4 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | I-05 | Observabilidade: OpenTelemetry + trace distribuído entre .NET e Go | idea |
 | I-06 | CD: publicar imagens no GHCR e deploy automático | idea |
 | I-08 | Rate limit nas tentativas de login (no gateway ou no Users) + refresh token | idea |
-| I-07 | Rotas do gateway: evitar `/api/users/users` (não remover o prefixo, ou serviços expõem a raiz do recurso). Decidir antes do T-006 | idea |
+| I-07 | Rotas do gateway: evitar `/api/users/users` → virou **T-004b** | done |

@@ -2,6 +2,10 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-004b Rotas do gateway
+- Gateway roteia por recurso: `/api/users`, `/api/auth`, `/api/products`, `/api/cart`, `/api/orders`; health em `/health/<serviço>`.
+- Novo projeto `Gateway.IntegrationTests` (13 testes). 62 testes verdes na solution. Próxima: **T-005** (Product, nicho genérico).
+
 ## 2026-10-13 — T-001b GitHub + CI
 - Repo público https://github.com/lucasGomes01/marketplace; primeiro CI verde nos 4 jobs (.NET, Go, Web, Docker).
 - Histórico reescrito para remover `Co-Authored-By` de IA: commits só no nome do dono (regra em `conventions.md`).

@@ -2,7 +2,7 @@
 
 ```
              ┌──────────────┐
-  React ───▶ │ Gateway YARP │ :5000   (/api/users, /api/catalog, /api/cart, /api/orders)
+  React ───▶ │ Gateway YARP │ :5000   (/api/users, /api/auth, /api/products, /api/cart, /api/orders)
   :5173      └──────┬───────┘
      ┌──────────────┼───────────────┬───────────────┐
      ▼              ▼               ▼               ▼

@@ -50,4 +50,4 @@
 
 ## API
 - Rotas no plural e em minúsculas: `/products`, `/products/{id}`, `/cart/items`.
-- Tudo passa pelo gateway: o front chama `/api/<serviço>/...`.
+- Tudo passa pelo gateway, que roteia por **recurso**: o front chama `/api/<recurso>/...` (ex.: `/api/products/123`) e o serviço recebe `/<recurso>/...`. Health: `/health/<serviço>`. Mapa completo em `tasks/T-004b-rotas-gateway.md`.

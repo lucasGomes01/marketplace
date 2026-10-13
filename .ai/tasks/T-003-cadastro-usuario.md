@@ -34,5 +34,5 @@ com Testcontainers que os outros serviços vão copiar.
   - `Location: /users/{id}` aponta para um `GET /users/{id}` que ainda não existe (entra quando for necessário).
   - Hash com `PasswordHasher` do ASP.NET Identity (PBKDF2), que já vem no shared framework (sem pacote extra).
   - `dotnet-ef` instalado como ferramenta local (`dotnet-tools.json`): rode `dotnet tool restore`.
-  - ⚠️ Pelo gateway a URL fica `/api/users/users` (o gateway remove `/api/users`). Ver ideia I-07 no BACKLOG.
+  - ⚠️ Pelo gateway a URL fica `/api/users/users` (o gateway remove `/api/users`). Resolvido na T-004b: agora é `/api/users`.
   - Validado também via `docker compose`: 201, 409 (email duplicado com outra caixa) e 400.

@@ -16,3 +16,6 @@ app.MapGet("/health", () => Results.Ok(new { service = "gateway", status = "heal
 app.MapReverseProxy();
 
 app.Run();
+
+// Exposto para WebApplicationFactory<Program> nos testes de integração.
+public partial class Program;

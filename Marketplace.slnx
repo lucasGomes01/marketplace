@@ -32,6 +32,9 @@
     <Project Path="tests/Catalog/Catalog.IntegrationTests/Catalog.IntegrationTests.csproj" />
     <Project Path="tests/Catalog/Catalog.UnitTests/Catalog.UnitTests.csproj" />
   </Folder>
+  <Folder Name="/tests/Gateway/">
+    <Project Path="tests/Gateway/Gateway.IntegrationTests/Gateway.IntegrationTests.csproj" />
+  </Folder>
   <Folder Name="/tests/Users/">
     <Project Path="tests/Users/Users.IntegrationTests/Users.IntegrationTests.csproj" />
     <Project Path="tests/Users/Users.UnitTests/Users.UnitTests.csproj" />

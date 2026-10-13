@@ -26,7 +26,7 @@ cd src/web && npm install && npm run dev       # front
 Tudo em containers:
 ```bash
 docker compose --profile apps up -d --build
-curl http://localhost:5000/api/catalog/health
+curl http://localhost:5000/health/catalog
 ```
 
 ## Roadmap
