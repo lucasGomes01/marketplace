@@ -1,10 +1,9 @@
 using System.Net;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Catalog.IntegrationTests;
 
-public class HealthEndpointTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+[Collection(CatalogApiCollection.Name)]
+public class HealthEndpointTests(CatalogApiFactory factory)
 {
     [Fact]
     public async Task Get_health_returns_ok()

@@ -33,7 +33,7 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | ID | Tarefa | Serviço | Depende | Status |
 |---|---|---|---|---|
 | T-005 | Domínio `Product` + value object `Money` (preço > 0, estoque ≥ 0, dono Seller) | Catalog | T-001 | done |
-| T-006 | `POST /products` (só Seller), `GET /products` (paginado), `GET /products/{id}` — já nas camadas do ADR-004 (criar `Catalog.Application`/`Catalog.Infrastructure`) | Catalog | T-004, T-005, T-019 | todo |
+| T-006 | `POST /products` (só Seller), `GET /products` (paginado), `GET /products/{id}` — já nas camadas do ADR-004 (criar `Catalog.Application`/`Catalog.Infrastructure`) | Catalog | T-004, T-005, T-019 | done |
 | T-014 | **Telas:** lista e detalhe de produtos; cadastro de produto (Seller). "Adicionar ao carrinho" entra na T-014b | Web | T-006, T-013 | todo |
 
 ## Fase 3 — Carrinho

@@ -2,6 +2,11 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-006 API de produtos
+- Catalog em camadas: `POST /api/products` (Seller), `GET /api/products` (paginado, mais recentes primeiro), `GET /api/products/{id}`.
+- Bug corrigido em todos os serviços: JSON malformado dava 500 → agora 400 (`UseMarketplaceExceptionHandler`). 170 testes .NET verdes.
+- Próxima: **T-014** (telas do catálogo).
+
 ## 2026-10-13 — T-019 Conta única
 - Toda conta compra; "Começar a vender" (`POST /api/users/me/seller`) ativa o perfil de vendedor e devolve token novo.
 - Token com um claim `role` por papel. Migration converte `Role=Seller` → `IsSeller` (testada). Cadastro sem tipo de conta.

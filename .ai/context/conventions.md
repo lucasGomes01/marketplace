@@ -34,7 +34,7 @@
    inesperado. `DomainException` vira `Error.Validation(ex.Field, ...)` no handler.
 4. **Infrastructure**: implemente a porta (ex.: repositório EF) e registre em `AddXInfrastructure`.
    Corridas de unicidade: checar antes **e** traduzir `SqlException` 2601/2627 numa exceção da porta.
-5. **Api**: endpoint em `Endpoints/` que só faz `request → command → handler → result.ToHttpResult(...)`.
+5. **Api**: `app.UseMarketplaceExceptionHandler()` no Program; endpoint em `Endpoints/` que só faz `request → command → handler → result.ToHttpResult(...)`.
    O handler é registrado sozinho (`AddHandlersFrom`); nada mais muda (O de SOLID).
 6. Rode os testes de arquitetura: eles falham se uma camada interna referenciar uma externa.
 

@@ -16,7 +16,9 @@
   </Folder>
   <Folder Name="/src/services/Catalog/">
     <Project Path="src/services/Catalog/Catalog.Api/Catalog.Api.csproj" />
+    <Project Path="src/services/Catalog/Catalog.Application/Catalog.Application.csproj" />
     <Project Path="src/services/Catalog/Catalog.Domain/Catalog.Domain.csproj" />
+    <Project Path="src/services/Catalog/Catalog.Infrastructure/Catalog.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/src/services/Users/">
     <Project Path="src/services/Users/Users.Api/Users.Api.csproj" />

@@ -54,6 +54,16 @@ public class RegisterUserTests(UsersApiFactory factory)
     }
 
     [Fact]
+    public async Task Malformed_json_is_a_client_error_not_a_server_error()
+    {
+        var body = new StringContent("{ not json", System.Text.Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("/users", body);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Registering_an_existing_email_returns_409()
     {
         var email = $"dup-{Guid.NewGuid():N}@example.com";

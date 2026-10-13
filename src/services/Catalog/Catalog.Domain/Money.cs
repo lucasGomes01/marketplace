@@ -27,7 +27,7 @@ public sealed record Money
         var normalizedCurrency = (currency ?? string.Empty).Trim().ToUpperInvariant();
         if (normalizedCurrency.Length != 3 || !normalizedCurrency.All(char.IsAsciiLetterUpper))
         {
-            throw new DomainException($"'{currency}' is not a valid ISO 4217 currency code.", "price");
+            throw new DomainException($"'{currency}' is not a valid ISO 4217 currency code.", "currency");
         }
 
         return new Money(amount, normalizedCurrency);

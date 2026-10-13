@@ -1,3 +1,4 @@
+using BuildingBlocks.Api;
 using System.Text.Json.Serialization;
 using BuildingBlocks.Auth;
 using Users.Api.Endpoints;
@@ -28,7 +29,7 @@ if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
     await app.Services.MigrateUsersDatabaseAsync();
 }
 
-app.UseExceptionHandler();
+app.UseMarketplaceExceptionHandler();
 app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseAuthorization();
