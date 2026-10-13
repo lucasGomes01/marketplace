@@ -2,6 +2,9 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-007 Domínio do carrinho
+- `ShoppingCart` + `CartItem` (snapshot do produto) + `Money` com soma. Vários vendedores, uma moeda, 1..99 por item. 23 testes.
+
 ## 2026-10-13 — T-014 Telas do catálogo
 - Vitrine (`/`, paginada), página do produto (`/produtos/:id`) e anunciar produto (`/vender/novo`, com convite para quem só compra).
 - Preço em formato brasileiro na entrada e na exibição. Layout corrigido para celular. 49 testes de front.
