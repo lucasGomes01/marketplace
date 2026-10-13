@@ -11,7 +11,7 @@
 - O nome do teste descreve o comportamento: `Adding_same_product_twice_increases_quantity`
   (C#) / `TestAddingSameProductTwiceIncreasesQuantity` (Go).
 - Arrange / Act / Assert separados por linha em branco.
-- Pirâmide: a maioria dos testes é unitária no Domain; os de integração cobrem endpoint + banco real (Testcontainers).
+- Pirâmide: a maioria dos testes é unitária (Domain e handlers da Application com fakes); os de integração cobrem endpoint + banco real (Testcontainers).
   Nada de mockar o DbContext.
 - Um container por classe de teste via `IClassFixture` / `ICollectionFixture`, para manter a suíte rápida.
 
@@ -24,19 +24,29 @@
 - Para verificar o estado no banco: `factory.WithDbContext(db => ...)`.
 - xUnit 2.x: implementar `IAsyncLifetime` explicitamente (retorna `Task`) porque a factory já tem `DisposeAsync(): ValueTask`.
 
-### Padrão de endpoint (.NET) — referência: `Users.Api/Features/Users/RegisterUser.cs`
-- Classe estática por caso de uso com `Request`/`Response` aninhados e `MapXxx(this IEndpointRouteBuilder)`.
-- Regras da entidade → `DomainException(message, field)` → `ValidationProblem` com a chave `field`.
-- Conflito de unicidade: checar antes **e** tratar `SqlException` 2601/2627 (corrida).
-- Migrations em `Infrastructure/Migrations`: `dotnet tool run dotnet-ef migrations add <Nome> -p src/services/X/X.Api -o Infrastructure/Migrations`.
+### SOLID: passo a passo de um caso de uso novo (.NET) — referência: serviço Users, ADR-004
+1. **Domain** (se houver regra nova): teste unitário → entidade/value object. Violação → `DomainException(message, field)`.
+2. **Application**: teste do handler com **fakes em memória** das portas → `XxxCommand`/`XxxQuery` (record) +
+   `XxxHandler : IHandler<XxxCommand, XxxResponse>` na pasta do caso de uso. Precisa de algo externo? Crie uma
+   **porta pequena** em `Abstractions/` (I de SOLID), nunca injete `DbContext`, `HttpClient` ou Kafka no handler.
+3. Falha esperada → `return Error.Validation(field, code, message)` / `Error.Conflict(...)` / `Error.NotFound(...)` /
+   `Error.Unauthorized(...)`. Códigos estáveis no formato `campo.motivo` (`password.too_short`). Exceção só para o
+   inesperado. `DomainException` vira `Error.Validation(ex.Field, ...)` no handler.
+4. **Infrastructure**: implemente a porta (ex.: repositório EF) e registre em `AddXInfrastructure`.
+   Corridas de unicidade: checar antes **e** traduzir `SqlException` 2601/2627 numa exceção da porta.
+5. **Api**: endpoint em `Endpoints/` que só faz `request → command → handler → result.ToHttpResult(...)`.
+   O handler é registrado sozinho (`AddHandlersFrom`); nada mais muda (O de SOLID).
+6. Rode os testes de arquitetura: eles falham se uma camada interna referenciar uma externa.
+
+- Migrations: `dotnet tool run dotnet-ef migrations add <Nome> -p src/services/X/X.Infrastructure -s src/services/X/X.Api -o Persistence/Migrations`.
 
 ## C# / .NET
 - .NET 10, Nullable habilitado, `record` para DTOs e eventos.
 - O domínio protege as invariantes: construtor/factory valida e lança `DomainException`; setters privados.
-- Minimal APIs agrupadas por feature com `MapGroup`. Erros → `ProblemDetails` (RFC 9457).
+- Minimal APIs finas (ver passo a passo SOLID acima). Erros → `ProblemDetails` (RFC 9457) com `code` nas extensões.
 - Dinheiro: `decimal` dentro do value object `Money`; nunca `double`.
 - IDs: `Guid` v7 (`Guid.CreateVersion7()`).
-- EF Core: configuração com `IEntityTypeConfiguration<T>`, migrations no projeto Api.
+- EF Core: configuração com `IEntityTypeConfiguration<T>`, migrations em `X.Infrastructure/Persistence/Migrations`.
 
 ## Go
 - Stdlib primeiro. Dependências permitidas: `github.com/microsoft/go-mssqldb`,

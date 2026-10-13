@@ -26,13 +26,13 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | ID | Tarefa | Serviço | Depende | Status |
 |---|---|---|---|---|
 | T-017 | Trocar RabbitMQ por Kafka (KRaft, tópicos declarados, Kafka UI) — ADR-003 | Infra | T-013 | done |
-| T-018 | SOLID: camadas Domain/Application/Infrastructure/Api, começando pelo Users — ADR-004 | Users | T-017 | todo |
+| T-018 | SOLID: camadas Domain/Application/Infrastructure/Api, começando pelo Users — ADR-004 | Users | T-017 | done |
 
 ## Fase 2 — Produto
 | ID | Tarefa | Serviço | Depende | Status |
 |---|---|---|---|---|
 | T-005 | Domínio `Product` + value object `Money` (preço > 0, estoque ≥ 0, dono Seller) | Catalog | T-001 | done |
-| T-006 | `POST /products` (só Seller), `GET /products` (paginado), `GET /products/{id}` | Catalog | T-004, T-005 | todo |
+| T-006 | `POST /products` (só Seller), `GET /products` (paginado), `GET /products/{id}` — já nas camadas do ADR-004 (criar `Catalog.Application`/`Catalog.Infrastructure`) | Catalog | T-004, T-005, T-018 | todo |
 | T-014 | **Telas:** lista e detalhe de produtos; cadastro de produto (Seller). "Adicionar ao carrinho" entra na T-014b | Web | T-006, T-013 | todo |
 
 ## Fase 3 — Carrinho
@@ -67,4 +67,4 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | I-06 | CD: publicar imagens no GHCR e deploy automático | idea |
 | I-07 | Rotas do gateway: evitar `/api/users/users` → virou **T-004b** | done |
 | I-08 | Rate limit nas tentativas de login (no gateway ou no Users) + refresh token | idea |
-| I-09 | Erros de validação com **códigos** (ex.: `password.too_short`) além do texto, para o front traduzir sem regex | idea |
+| I-09 | Erros com **códigos** para o front traduzir sem regex. Já existem no `Result` (T-018) e saem em 401/404/409; falta expô-los no 400 de validação e usar no front | idea |

@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/src/" />
   <Folder Name="/src/building-blocks/">
+    <Project Path="src/building-blocks/BuildingBlocks.Api/BuildingBlocks.Api.csproj" />
+    <Project Path="src/building-blocks/BuildingBlocks.Application/BuildingBlocks.Application.csproj" />
     <Project Path="src/building-blocks/BuildingBlocks.Auth/BuildingBlocks.Auth.csproj" />
     <Project Path="src/building-blocks/BuildingBlocks.Messaging/BuildingBlocks.Messaging.csproj" />
   </Folder>
@@ -18,11 +20,14 @@
   </Folder>
   <Folder Name="/src/services/Users/">
     <Project Path="src/services/Users/Users.Api/Users.Api.csproj" />
+    <Project Path="src/services/Users/Users.Application/Users.Application.csproj" />
     <Project Path="src/services/Users/Users.Domain/Users.Domain.csproj" />
+    <Project Path="src/services/Users/Users.Infrastructure/Users.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/" />
   <Folder Name="/tests/BuildingBlocks/">
     <Project Path="tests/BuildingBlocks/BuildingBlocks.Auth.UnitTests/BuildingBlocks.Auth.UnitTests.csproj" />
+    <Project Path="tests/BuildingBlocks/BuildingBlocks.UnitTests/BuildingBlocks.UnitTests.csproj" />
   </Folder>
   <Folder Name="/tests/Cart/">
     <Project Path="tests/Cart/Cart.IntegrationTests/Cart.IntegrationTests.csproj" />

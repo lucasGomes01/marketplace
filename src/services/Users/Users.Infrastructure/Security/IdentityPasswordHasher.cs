@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Identity;
+using Users.Application.Abstractions;
 
-namespace Users.Api.Infrastructure;
+namespace Users.Infrastructure.Security;
 
 /// <summary>PBKDF2 do ASP.NET Identity. O hash já inclui salt, algoritmo e número de iterações.</summary>
-public sealed class IdentityPasswordHasher : Domain.IPasswordHasher
+public sealed class IdentityPasswordHasher : IPasswordHasher
 {
     private static readonly PasswordHasher<object> Hasher = new();
     private static readonly object NoUser = new();

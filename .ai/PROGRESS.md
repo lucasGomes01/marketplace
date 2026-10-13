@@ -2,6 +2,11 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-13 — T-018 Camadas SOLID
+- Users agora em Domain / Application / Infrastructure / Api (ADR-004). Casos de uso = `IHandler<,>` → `Result<T>`; portas em `Abstractions/`.
+- Novos `BuildingBlocks.Application` e `BuildingBlocks.Api`; testes de arquitetura garantem a regra de dependência.
+- Passo a passo "caso de uso novo" em `conventions.md`. **Catalog (T-006) nasce nesse padrão.** 126 testes .NET + 22 front verdes.
+
 ## 2026-10-13 — T-017 Kafka
 - RabbitMQ → Kafka 4.1 (KRaft). Tópicos declarados no `kafka-init`, auto-create desligado, Kafka UI em :8080. ADR-003.
 - Tópico `cart.checked-out` (com hífen). `BuildingBlocks.Messaging` agora referencia Confluent.Kafka. Próxima: **T-018** (camadas SOLID).

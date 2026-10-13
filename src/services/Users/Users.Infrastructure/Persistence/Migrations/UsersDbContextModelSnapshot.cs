@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Users.Api.Infrastructure;
+using Users.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace Users.Api.Infrastructure.Migrations
+namespace Users.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(UsersDbContext))]
     partial class UsersDbContextModelSnapshot : ModelSnapshot

@@ -52,7 +52,7 @@ public class RegisterUserTests(UsersApiFactory factory)
         var id = (await response.Content.ReadFromJsonAsync<UserResponse>())!.Id;
         var stored = await factory.WithDbContext(db => db.Users.AsNoTracking().SingleAsync(u => u.Id == id));
         Assert.NotEqual(password, stored.PasswordHash);
-        Assert.True(new Api.Infrastructure.IdentityPasswordHasher().Verify(stored.PasswordHash, password));
+        Assert.True(new Infrastructure.Security.IdentityPasswordHasher().Verify(stored.PasswordHash, password));
     }
 
     [Fact]

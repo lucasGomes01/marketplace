@@ -1,23 +1,20 @@
 using System.Text.Json.Serialization;
 using BuildingBlocks.Auth;
-using Microsoft.EntityFrameworkCore;
-using Users.Api.Features.Auth;
-using Users.Api.Features.Users;
-using Users.Api.Infrastructure;
-using Users.Domain;
+using Users.Api.Endpoints;
+using Users.Application;
+using Users.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Composition root: o único lugar que conhece Application e Infrastructure ao mesmo tempo (ADR-004).
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
-builder.Services.AddDbContext<UsersDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
-builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
 builder.Services.AddMarketplaceJwtAuth(builder.Configuration);
+builder.Services.AddUsersApplication();
+builder.Services.AddUsersInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
@@ -28,8 +25,7 @@ if (app.Environment.IsDevelopment())
 
 if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
 {
-    using var scope = app.Services.CreateScope();
-    await scope.ServiceProvider.GetRequiredService<UsersDbContext>().Database.MigrateAsync();
+    await app.Services.MigrateUsersDatabaseAsync();
 }
 
 app.UseExceptionHandler();
@@ -38,9 +34,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { service = "users", status = "healthy" }));
-app.MapRegisterUser();
-app.MapGetCurrentUser();
-app.MapLogin();
+app.MapUsersEndpoints();
+app.MapAuthEndpoints();
 
 app.Run();
 

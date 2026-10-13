@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Users.Domain;
 
-namespace Users.Api.Infrastructure;
+namespace Users.Infrastructure.Persistence;
 
 public sealed class UsersDbContext(DbContextOptions<UsersDbContext> options) : DbContext(options)
 {

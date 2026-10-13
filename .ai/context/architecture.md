@@ -24,12 +24,23 @@
 
 No Docker, cada serviço escuta em `8080`; o gateway é exposto em `localhost:5000`.
 
-## Estrutura de cada serviço .NET
-- `X.Domain`: entidades, value objects e regras. **Sem** dependência de EF ou ASP.NET. É o alvo dos testes unitários.
-- `X.Api`: Minimal APIs, EF Core (DbContext, migrations) e mensageria. Organizado por feature
-  (`Features/Products/CreateProduct.cs`), não por camada técnica.
-- `tests/X/X.UnitTests`: xUnit, domínio puro, rápido.
+## Estrutura de cada serviço .NET (camadas SOLID — ADR-004)
+```
+Api ──► Application ──► Domain          (as setas só apontam para dentro)
+ │           ▲
+ └──► Infrastructure (implementa as interfaces da Application)
+```
+- `X.Domain`: entidades, value objects e regras. Só a biblioteca padrão.
+- `X.Application`: casos de uso (`IHandler<TRequest, TResponse>` → `Result<T>`), **portas** em `Abstractions/`
+  (repositórios, hasher, emissor de token, publicador de eventos) e DTOs. Uma pasta por caso de uso (`Register/`, `Login/`).
+- `X.Infrastructure`: EF Core (`Persistence/`: DbContext, configurações, migrations, repositórios), segurança, Kafka.
+  Expõe `AddXInfrastructure(configuration)`.
+- `X.Api`: endpoints finos em `Endpoints/` + `Program.cs` (composition root).
+- `tests/X/X.UnitTests`: domínio, casos de uso com fakes em memória e **testes de arquitetura** (regra de dependência).
 - `tests/X/X.IntegrationTests`: `WebApplicationFactory` + **Testcontainers** (SQL Server e Kafka reais).
+- Compartilhados: `BuildingBlocks.Application` (`Result`, `Error`, `IHandler`, `AddHandlersFrom`),
+  `BuildingBlocks.Api` (`ToHttpResult`), `BuildingBlocks.Auth` (JWT), `BuildingBlocks.Messaging` (Kafka).
+- Referência completa: serviço **Users**.
 
 ## Orders (Go)
 ```

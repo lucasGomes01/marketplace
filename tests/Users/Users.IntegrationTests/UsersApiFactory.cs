@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.MsSql;
-using Users.Api.Infrastructure;
+using Users.Infrastructure.Persistence;
 
 namespace Users.IntegrationTests;
 
