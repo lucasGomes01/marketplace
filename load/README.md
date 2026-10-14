@@ -11,6 +11,9 @@ load/run.sh compra             # carrinho → checkout → espera Confirmado, 50
 load/run.sh compra BUYERS=150  # mais compradores
 load/run.sh disputa            # 100 compradores, 10 unidades: exatamente 10 confirmados
 load/run.sh estresse           # sem pausas, sobe até 2000 req/s; para sozinho quando o p95 passa de 1 s
+load/run.sh lentidao           # carga contínua por 10 min para usar o site e sentir a lentidão
+load/run.sh lentidao RATE=500 DURATION=5m   # mais leve / mais curto
+docker stop k6-lentidao        # para qualquer cenário antes do fim (container k6-<cenário>)
 ```
 
 O resumo sai no terminal e em `load/results/<cenário>.json` (ignorado pelo git).
@@ -22,6 +25,7 @@ O resumo sai no terminal e em `load/results/<cenário>.json` (ignorado pelo git)
 | `navegacao` | Gateway + Catalog + SQL aguentam leitura | p95 < 500 ms, erros < 1% |
 | `compra` | Escrita e o caminho assíncrono (Cart → Kafka → Orders → Catalog → Orders) | p95 < 800 ms no carrinho/checkout; `pedido_tempo_ate_confirmar` p95 < 10 s; nenhum pedido sem resposta |
 | `disputa` | Concorrência no estoque | confirmados = estoque, recusados = resto, estoque final 0 |
+| `lentidao` | Sentir a lentidão no navegador: 900 leituras/s + 30 compradores sem parar | nenhum (só sustenta a carga) |
 | `estresse` | Onde o sistema quebra (leitura, taxa fixa crescente) | para (`abortOnFail`) com p95 > 1 s ou erros > 5% |
 
 ## Como ler
