@@ -2,6 +2,12 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-14 — T-012 Estoque e confirmação do pedido
+- Catalog consome `order.placed` (consumidor Kafka genérico novo em BuildingBlocks.Messaging) e baixa o estoque tudo ou nada, idempotente por `StockReservation`; publica `stock.reserved`/`stock.rejected` com motivo.
+- Orders consome os dois e marca o pedido `Confirmed`/`Rejected`. Última unidade disputada: `rowversion` + nova tentativa → nunca estoque negativo.
+- Verificado no compose ponta a ponta. **Fluxo usuário → produto → carrinho → pedido completo no backend.**
+- Próxima: **T-015** (telas de checkout e "meus pedidos").
+
 ## 2026-10-13 — T-011 Orders consome o checkout (Go)
 - Orders: consumidor Kafka (franz-go, grupo `orders-service`) → pedido no SQL Server (go-mssqldb) → `order.placed`; `GET /api/orders` e `/api/orders/{id}` com JWT validado em Go.
 - Idempotência provada com replay do tópico. Teste de Kafka do Go: imagem `confluent-local:7.5.0` (a 7.9.0 quebrava o módulo — diagnóstico inicial "limitação do Docker Desktop" estava errado).

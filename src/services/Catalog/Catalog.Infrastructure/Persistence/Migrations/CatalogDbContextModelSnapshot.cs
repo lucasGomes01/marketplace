@@ -49,6 +49,11 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Price", "Catalog.Domain.Product.Price#Money", b1 =>
                         {
                             b1.IsRequired();
@@ -73,6 +78,32 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                     b.HasIndex("SellerId");
 
                     b.ToTable("Products", (string)null);
+                });
+
+            modelBuilder.Entity("Catalog.Domain.StockReservation", b =>
+                {
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.PrimitiveCollection<string>("RejectedProductIds")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("OrderId");
+
+                    b.ToTable("StockReservations", (string)null);
                 });
 #pragma warning restore 612, 618
         }

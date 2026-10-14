@@ -130,6 +130,20 @@ func (s *Store) Insert(ctx context.Context, o *order.Order) (err error) {
 	return tx.Commit()
 }
 
+// UpdateStatus grava a mudança de status (os itens nunca mudam depois de criados).
+func (s *Store) UpdateStatus(ctx context.Context, o *order.Order) error {
+	result, err := s.db.ExecContext(ctx,
+		`UPDATE dbo.Orders SET Status = @p2, RejectionReason = @p3, UpdatedAt = @p4 WHERE Id = @p1`,
+		o.ID, string(o.Status), nullable(o.RejectionReason), mssql.DateTimeOffset(o.UpdatedAt))
+	if err != nil {
+		return fmt.Errorf("update order: %w", err)
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return app.ErrNotFound
+	}
+	return nil
+}
+
 // Get carrega o pedido com os itens. Inexistente → app.ErrNotFound.
 func (s *Store) Get(ctx context.Context, id string) (*order.Order, error) {
 	rows, err := s.db.QueryContext(ctx, orderColumns+` WHERE Id = @p1`, id)

@@ -25,7 +25,7 @@ func startSQLServer(t *testing.T) string {
 	container, err := mssql.Run(ctx, "mcr.microsoft.com/mssql/server:2022-latest",
 		mssql.WithAcceptEULA(), mssql.WithPassword("Orders_Test_Passw0rd!"),
 		// O padrão (60s) não basta numa máquina carregada; o SQL Server pode levar mais para ficar pronto.
-		testcontainers.WithWaitStrategy(wait.ForLog("Recovery is complete").WithStartupTimeout(4*time.Minute)))
+		testcontainers.WithWaitStrategyAndDeadline(4*time.Minute, wait.ForLog("Recovery is complete").WithStartupTimeout(4*time.Minute)))
 	if err != nil {
 		t.Fatalf("start sql server: %v", err)
 	}
@@ -104,6 +104,26 @@ func TestStoreWithRealSQLServer(t *testing.T) {
 	t.Run("missing order is ErrNotFound", func(t *testing.T) {
 		if _, err := s.Get(ctx, "nope"); !errors.Is(err, app.ErrNotFound) {
 			t.Errorf("err = %v, want ErrNotFound", err)
+		}
+	})
+
+	t.Run("updates status, reason and updatedAt", func(t *testing.T) {
+		o := newOrder(t, "order-status", "buyer-3", base)
+		if err := s.Insert(ctx, o); err != nil {
+			t.Fatal(err)
+		}
+		_ = o.Reject("Estoque insuficiente: Furadeira", base.Add(time.Minute))
+
+		if err := s.UpdateStatus(ctx, o); err != nil {
+			t.Fatalf("update: %v", err)
+		}
+
+		got, _ := s.Get(ctx, "order-status")
+		if got.Status != order.StatusRejected || got.RejectionReason != "Estoque insuficiente: Furadeira" || !got.UpdatedAt.Equal(base.Add(time.Minute)) {
+			t.Errorf("order = %+v", got)
+		}
+		if err := s.UpdateStatus(ctx, newOrder(t, "missing", "x", base)); !errors.Is(err, app.ErrNotFound) {
+			t.Errorf("missing order: err = %v, want ErrNotFound", err)
 		}
 	})
 

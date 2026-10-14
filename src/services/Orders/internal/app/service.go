@@ -24,6 +24,8 @@ var (
 // Repository é a porta de persistência.
 type Repository interface {
 	Insert(ctx context.Context, o *order.Order) error
+	// UpdateStatus grava status, motivo e UpdatedAt. Inexistente → ErrNotFound.
+	UpdateStatus(ctx context.Context, o *order.Order) error
 	Get(ctx context.Context, id string) (*order.Order, error)
 	ListByBuyer(ctx context.Context, buyerID string, limit int) ([]*order.Order, error)
 }
@@ -37,6 +39,8 @@ type Publisher interface {
 const (
 	EventCartCheckedOut = "cart.checked-out"
 	EventOrderPlaced    = "order.placed"
+	EventStockReserved  = "stock.reserved"
+	EventStockRejected  = "stock.rejected"
 )
 
 // CartCheckedOut é o "data" do evento publicado pelo Cart. Preços chegam como número decimal JSON.
@@ -67,6 +71,18 @@ type OrderPlaced struct {
 type PlacedItem struct {
 	ProductID string `json:"productId"`
 	Quantity  int    `json:"quantity"`
+}
+
+// StockReserved: o Catalog baixou o estoque de todos os itens.
+type StockReserved struct {
+	OrderID string `json:"orderId"`
+}
+
+// StockRejected: faltou estoque (nada foi baixado); Reason é legível para o comprador.
+type StockRejected struct {
+	OrderID    string   `json:"orderId"`
+	Reason     string   `json:"reason"`
+	ProductIDs []string `json:"productIds"`
 }
 
 // MaxOrdersListed limita "meus pedidos" (paginação fica para depois).
@@ -124,6 +140,39 @@ func placedEvent(o *order.Order) OrderPlaced {
 		items[i] = PlacedItem{ProductID: item.ProductID, Quantity: item.Quantity}
 	}
 	return OrderPlaced{OrderID: o.ID, BuyerID: o.BuyerID, CartID: o.CartID, Items: items}
+}
+
+// ConfirmOrder marca o pedido como confirmado (estoque reservado). Repetir é inofensivo.
+func (s *Service) ConfirmOrder(ctx context.Context, event StockReserved) error {
+	return s.transition(ctx, event.OrderID, func(o *order.Order) error { return o.Confirm(s.clock()) })
+}
+
+// RejectOrder recusa o pedido com o motivo vindo do Catalog. Repetir é inofensivo.
+func (s *Service) RejectOrder(ctx context.Context, event StockRejected) error {
+	return s.transition(ctx, event.OrderID, func(o *order.Order) error { return o.Reject(event.Reason, s.clock()) })
+}
+
+// transition carrega, aplica a regra do domínio e grava. Pedido inexistente ou transição proibida nunca vai dar
+// certo tentando de novo → ErrInvalidEvent (o consumidor registra e pula).
+func (s *Service) transition(ctx context.Context, orderID string, apply func(*order.Order) error) error {
+	o, err := s.repo.Get(ctx, orderID)
+	if errors.Is(err, ErrNotFound) {
+		return fmt.Errorf("%w: order %s not found", ErrInvalidEvent, orderID)
+	}
+	if err != nil {
+		return fmt.Errorf("load order: %w", err)
+	}
+	before := o.Status
+	if err := apply(o); err != nil {
+		return fmt.Errorf("%w: %v", ErrInvalidEvent, err)
+	}
+	if o.Status == before {
+		return nil // evento repetido: nada mudou
+	}
+	if err := s.repo.UpdateStatus(ctx, o); err != nil {
+		return fmt.Errorf("update order: %w", err)
+	}
+	return nil
 }
 
 // OrdersOf lista os pedidos do comprador, mais recentes primeiro.

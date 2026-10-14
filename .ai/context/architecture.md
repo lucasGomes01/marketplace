@@ -60,12 +60,16 @@ internal/messaging/       consumer/producer Kafka (franz-go)
   Cada serviço consome com seu próprio consumer group (`orders-service`, `catalog-service`...).
 - Kafka UI em http://localhost:8080 para ver tópicos, mensagens e offsets dos grupos.
 - Consumidores devem ser **idempotentes** (guardar o `eventId` já processado).
+- .NET: `AddKafkaEventConsumer<TEvent,THandler>(tópico, grupo)` (BuildingBlocks.Messaging) — escopo de DI por mensagem,
+  commit só depois de processar, nova tentativa com backoff, JSON inválido/`InvalidEventException` registrados e pulados.
+  Go (Orders): mesmo comportamento em `internal/messaging`.
 
-## Fluxo de checkout (alvo do MVP)
+## Fluxo de checkout (implementado até a T-012)
 1. `POST /api/cart/checkout` → o Cart publica `cart.checked-out` (itens com snapshot de preço) e esvazia o carrinho.
    Responde `202 { checkoutId, orderId }` (o pedido nasce de forma assíncrona; `orderId` = `checkoutId`).
 2. O Orders consome → cria `Order(Pending)` → publica `order.placed`.
-3. O Catalog consome `order.placed` → baixa o estoque → publica `stock.reserved` ou `stock.rejected`.
+3. O Catalog consome `order.placed` → baixa o estoque (tudo ou nada, na mesma transação da `StockReservation`;
+   `rowversion` em `Products` resolve a disputa pela última unidade) → publica `stock.reserved` ou `stock.rejected`.
 4. O Orders consome → `Confirmed` ou `Rejected`.
 
 ## Autenticação

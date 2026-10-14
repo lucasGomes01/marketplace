@@ -20,6 +20,7 @@ import (
 	"marketplace/orders/internal/app"
 	"marketplace/orders/internal/auth"
 	"marketplace/orders/internal/messaging"
+	"marketplace/orders/internal/order"
 	"marketplace/orders/internal/store"
 )
 
@@ -95,7 +96,8 @@ func run(logger *slog.Logger) error {
 
 	service := app.NewService(orders, publisher, time.Now)
 
-	consumer, err := messaging.NewConsumer(cfg.brokers, consumerGroup, []string{app.EventCartCheckedOut}, checkoutHandler(service), logger)
+	topics := []string{app.EventCartCheckedOut, app.EventStockReserved, app.EventStockRejected}
+	consumer, err := messaging.NewConsumer(cfg.brokers, consumerGroup, topics, eventHandler(service), logger)
 	if err != nil {
 		return fmt.Errorf("kafka consumer: %w", err)
 	}
@@ -120,20 +122,46 @@ func run(logger *slog.Logger) error {
 	return nil
 }
 
-// checkoutHandler traduz o envelope Kafka no caso de uso; dado inválido vira erro permanente (registra e pula).
-func checkoutHandler(service *app.Service) messaging.Handler {
+// eventHandler roteia pelo tipo do envelope para o caso de uso; dado inválido vira erro permanente (registra e pula).
+func eventHandler(service *app.Service) messaging.Handler {
 	return func(ctx context.Context, env messaging.Envelope) error {
-		var event app.CartCheckedOut
-		if err := json.Unmarshal(env.Data, &event); err != nil {
-			return messaging.Permanent(fmt.Errorf("decode %s: %w", env.Type, err))
+		var err error
+		switch env.Type {
+		case app.EventCartCheckedOut:
+			var event app.CartCheckedOut
+			if err = decode(env, &event); err == nil {
+				var o *order.Order
+				if o, err = service.PlaceOrder(ctx, event); err == nil {
+					slog.InfoContext(ctx, "order placed", "orderId", o.ID, "buyerId", o.BuyerID, "total", o.Total().Cents)
+				}
+			}
+		case app.EventStockReserved:
+			var event app.StockReserved
+			if err = decode(env, &event); err == nil {
+				if err = service.ConfirmOrder(ctx, event); err == nil {
+					slog.InfoContext(ctx, "order confirmed", "orderId", event.OrderID)
+				}
+			}
+		case app.EventStockRejected:
+			var event app.StockRejected
+			if err = decode(env, &event); err == nil {
+				if err = service.RejectOrder(ctx, event); err == nil {
+					slog.InfoContext(ctx, "order rejected", "orderId", event.OrderID, "reason", event.Reason)
+				}
+			}
+		default:
+			err = fmt.Errorf("%w: unexpected event type %q", app.ErrInvalidEvent, env.Type)
 		}
-		order, err := service.PlaceOrder(ctx, event)
 		if errors.Is(err, app.ErrInvalidEvent) {
 			return messaging.Permanent(err)
 		}
-		if err == nil {
-			slog.InfoContext(ctx, "order placed", "orderId", order.ID, "buyerId", order.BuyerID, "total", order.Total().Cents)
-		}
 		return err
 	}
+}
+
+func decode(env messaging.Envelope, target any) error {
+	if err := json.Unmarshal(env.Data, target); err != nil {
+		return fmt.Errorf("%w: decode %s: %v", app.ErrInvalidEvent, env.Type, err)
+	}
+	return nil
 }

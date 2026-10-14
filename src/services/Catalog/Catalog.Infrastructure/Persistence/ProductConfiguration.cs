@@ -22,6 +22,9 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             price.Property(m => m.Currency).HasColumnName("Currency").HasMaxLength(3).IsFixedLength();
         });
 
+        // Concorrência otimista: duas reservas da mesma última unidade não podem ambas baixar o estoque.
+        builder.Property<byte[]>("Version").IsRowVersion();
+
         builder.HasIndex(p => p.CreatedAt);
         builder.HasIndex(p => p.SellerId);
     }

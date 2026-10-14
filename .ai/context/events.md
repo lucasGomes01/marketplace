@@ -40,17 +40,22 @@ Publicado por `POST /api/cart/checkout` (T-010). O carrinho é esvaziado logo de
 ```
 
 ## order.placed (Orders → Catalog)
+Publicado pelo Orders ao criar o pedido (T-011); `eventId` = id do pedido. O Catalog reserva o estoque (T-012).
 ```json
 { "orderId": "guid", "buyerId": "guid", "cartId": "guid",
   "items": [ { "productId": "guid", "quantity": 2 } ] }
 ```
 
 ## stock.reserved (Catalog → Orders)
+Estoque de **todos** os itens baixado. `eventId` = `orderId` (um resultado por pedido). O Orders marca `Confirmed`.
 ```json
 { "orderId": "guid" }
 ```
 
 ## stock.rejected (Catalog → Orders)
+Tudo ou nada: se algum item não tem estoque (ou o produto não existe mais), nada é baixado. `reason` é legível
+(ex.: "Estoque insuficiente: Furadeira (pedido 3, disponível 2)") e vira o motivo do pedido `Rejected`.
+Pedido repetido → o Catalog republica o mesmo resultado (guardado em `StockReservations`), sem baixar de novo.
 ```json
 { "orderId": "guid", "reason": "string", "productIds": ["guid"] }
 ```

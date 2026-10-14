@@ -26,6 +26,15 @@ func (r *memoryRepo) Insert(_ context.Context, o *order.Order) error {
 	return nil
 }
 
+func (r *memoryRepo) UpdateStatus(_ context.Context, o *order.Order) error {
+	if _, ok := r.orders[o.ID]; !ok {
+		return ErrNotFound
+	}
+	copied := *o
+	r.orders[o.ID] = &copied
+	return nil
+}
+
 func (r *memoryRepo) Get(_ context.Context, id string) (*order.Order, error) {
 	if o, ok := r.orders[id]; ok {
 		copied := *o
@@ -178,5 +187,63 @@ func TestBuyersOnlySeeTheirOwnOrders(t *testing.T) {
 	}
 	if errOwn != nil || own.ID != "order-1" {
 		t.Errorf("own order: %+v, %v", own, errOwn)
+	}
+}
+
+func TestStockReservedConfirmsTheOrder(t *testing.T) {
+	svc, repo, _ := newService()
+	_, _ = svc.PlaceOrder(context.Background(), checkedOut("order-1"))
+
+	if err := svc.ConfirmOrder(context.Background(), StockReserved{OrderID: "order-1"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if got := repo.orders["order-1"]; got.Status != order.StatusConfirmed || !got.UpdatedAt.Equal(now) {
+		t.Errorf("order = %+v", got)
+	}
+}
+
+func TestStockRejectedRejectsTheOrderWithTheReason(t *testing.T) {
+	svc, repo, _ := newService()
+	_, _ = svc.PlaceOrder(context.Background(), checkedOut("order-1"))
+
+	err := svc.RejectOrder(context.Background(), StockRejected{OrderID: "order-1", Reason: "Estoque insuficiente: Furadeira", ProductIDs: []string{"p-drill"}})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := repo.orders["order-1"]; got.Status != order.StatusRejected || got.RejectionReason != "Estoque insuficiente: Furadeira" {
+		t.Errorf("order = %+v", got)
+	}
+}
+
+func TestRepeatedStockEventsAreHarmless(t *testing.T) {
+	svc, repo, _ := newService()
+	_, _ = svc.PlaceOrder(context.Background(), checkedOut("order-1"))
+
+	for range 2 {
+		if err := svc.ConfirmOrder(context.Background(), StockReserved{OrderID: "order-1"}); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	}
+
+	if repo.orders["order-1"].Status != order.StatusConfirmed {
+		t.Errorf("status = %q", repo.orders["order-1"].Status)
+	}
+}
+
+func TestStockEventForAnUnknownOrIncompatibleOrderIsInvalid(t *testing.T) {
+	svc, _, _ := newService()
+	_, _ = svc.PlaceOrder(context.Background(), checkedOut("order-1"))
+	_ = svc.ConfirmOrder(context.Background(), StockReserved{OrderID: "order-1"})
+
+	unknown := svc.ConfirmOrder(context.Background(), StockReserved{OrderID: "nope"})
+	conflicting := svc.RejectOrder(context.Background(), StockRejected{OrderID: "order-1", Reason: "tarde demais"})
+
+	if !errors.Is(unknown, ErrInvalidEvent) {
+		t.Errorf("unknown order: err = %v, want ErrInvalidEvent", unknown)
+	}
+	if !errors.Is(conflicting, ErrInvalidEvent) {
+		t.Errorf("reject after confirm: err = %v, want ErrInvalidEvent", conflicting)
 	}
 }

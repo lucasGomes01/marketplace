@@ -1,4 +1,6 @@
+using BuildingBlocks.Messaging;
 using Catalog.Application.Abstractions;
+using Catalog.Application.ReserveStock;
 using Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -15,6 +17,11 @@ public static class DependencyInjection
             options.UseSqlServer(configuration.GetConnectionString("Default")));
 
         services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<IStockStore, StockStore>();
+
+        // Eventos: publica stock.reserved/stock.rejected e consome order.placed (grupo do serviço).
+        services.AddKafkaEventPublisher(configuration);
+        services.AddKafkaEventConsumer<OrderPlaced, ReserveStockHandler>(OrderPlaced.EventType, "catalog-service");
         services.TryAddSingleton(TimeProvider.System);
 
         return services;
