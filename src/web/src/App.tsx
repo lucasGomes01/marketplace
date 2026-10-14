@@ -9,6 +9,8 @@ import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { NewProductPage } from './pages/NewProductPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { OrderPage } from './pages/OrderPage'
+import { OrdersPage } from './pages/OrdersPage'
 import { ProductPage } from './pages/ProductPage'
 import { RegisterPage } from './pages/RegisterPage'
 
@@ -24,6 +26,8 @@ export function AppRoutes() {
         <Route element={<RequireAuth />}>
           <Route path="minha-conta" element={<AccountPage />} />
           <Route path="carrinho" element={<CartPage />} />
+          <Route path="pedidos" element={<OrdersPage />} />
+          <Route path="pedidos/:id" element={<OrderPage />} />
           <Route path="vender/novo" element={<NewProductPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />

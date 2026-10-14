@@ -27,6 +27,9 @@ export function Layout() {
                 <NavLink to="/vender/novo" className="site-nav__link">
                   Vender
                 </NavLink>
+                <NavLink to="/pedidos" className="site-nav__link">
+                  Pedidos
+                </NavLink>
                 <NavLink to="/carrinho" className="site-nav__link site-nav__cart">
                   Carrinho ({count})
                 </NavLink>

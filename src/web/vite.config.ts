@@ -13,6 +13,8 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // Telas inteiras com a API falsa: folga para máquinas carregadas (CI, Docker rodando).
+    testTimeout: 15_000,
     setupFiles: ['./src/test/setup.ts'],
     // Origem fixa para o fetch resolver URLs relativas (/api/...) nos testes.
     environmentOptions: { jsdom: { url: 'http://localhost:5173' } },

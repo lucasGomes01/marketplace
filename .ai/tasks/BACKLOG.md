@@ -50,7 +50,7 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | T-010 | BuildingBlocks.Messaging (producer/consumer Kafka + envelope, `IEventPublisher`) e `POST /cart/checkout` publicando `cart.checked-out` | Cart | T-008 | done |
 | T-011 | Orders consome `cart.checked-out` (franz-go), persiste no SQL Server, publica `order.placed`; `GET /orders` do comprador | Orders | T-009, T-010 | done |
 | T-012 | Catalog baixa estoque em `order.placed` (idempotente) → `stock.reserved`/`stock.rejected`; Orders atualiza status (o carrinho já é limpo no checkout, T-010) | Catalog/Orders/Cart | T-011 | done |
-| T-015 | **Telas:** finalizar pedido (checkout) e "meus pedidos" com status | Web | T-012, T-014b | todo |
+| T-015 | **Telas:** finalizar pedido (checkout) e "meus pedidos" com status | Web | T-012, T-014b | done |
 
 ## Fase 5 — Qualidade do fluxo completo
 | ID | Tarefa | Serviço | Depende | Status |

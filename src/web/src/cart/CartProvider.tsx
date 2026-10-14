@@ -44,6 +44,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       add: (productId, quantity = 1) => run((t) => cartApi.add(productId, quantity, t)),
       changeQuantity: (productId, quantity) => run((t) => cartApi.changeQuantity(productId, quantity, t)),
       remove: (productId) => run((t) => cartApi.remove(productId, t)),
+      checkout: async () => {
+        let orderId = ''
+        await run(async (t) => {
+          orderId = (await cartApi.checkout(t)).orderId
+          return { items: [], totalQuantity: 0, total: 0, currency: cart?.currency ?? 'BRL' }
+        })
+        return orderId
+      },
     }),
     [cart, run],
   )

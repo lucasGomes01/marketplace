@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
-import { cartErrorMessage } from '../api/cart'
+import { Link, useNavigate } from 'react-router'
+import { cartErrorMessage, checkoutErrorMessage } from '../api/cart'
 import { useCart } from '../cart/context'
 import { formatPrice } from '../utils/money'
 
 export function CartPage() {
-  const { cart, changeQuantity, remove } = useCart()
+  const { cart, changeQuantity, remove, checkout } = useCart()
+  const navigate = useNavigate()
   const [busyProductId, setBusyProductId] = useState<string | null>(null)
+  const [placing, setPlacing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   if (!cart) {
@@ -26,6 +28,18 @@ export function CartPage() {
       setError(cartErrorMessage(err))
     } finally {
       setBusyProductId(null)
+    }
+  }
+
+  async function placeOrder() {
+    setPlacing(true)
+    setError(null)
+    try {
+      const orderId = await checkout()
+      navigate(`/pedidos/${orderId}`, { state: { placed: true } })
+    } catch (err) {
+      setError(checkoutErrorMessage(err))
+      setPlacing(false)
     }
   }
 
@@ -110,8 +124,13 @@ export function CartPage() {
           <p className="cart__total">
             Total <strong data-testid="cart-total">{formatPrice(cart.total, cart.currency)}</strong>
           </p>
-          <button type="button" className="button button--primary button--block" disabled>
-            Finalizar pedido (em breve)
+          <button
+            type="button"
+            className="button button--primary button--block"
+            disabled={placing || busyProductId !== null}
+            onClick={placeOrder}
+          >
+            {placing ? 'Finalizando…' : 'Finalizar pedido'}
           </button>
           <Link to="/" className="cart__continue">
             Continuar comprando

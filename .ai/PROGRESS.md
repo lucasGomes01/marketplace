@@ -2,6 +2,11 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-14 — T-015 Telas de pedido
+- Carrinho com "Finalizar pedido" → `/pedidos/:id` acompanha o status (Processando → Confirmado | Recusado com motivo); "Meus pedidos" em `/pedidos` e no cabeçalho.
+- 73 testes de front. Verificado no navegador contra o compose (confirmado e recusado).
+- **Fase 4 concluída: o fluxo usuário → produto → carrinho → pedido funciona de ponta a ponta pelo navegador.** Próxima: **T-016** (E2E com Playwright no CI).
+
 ## 2026-10-14 — T-012 Estoque e confirmação do pedido
 - Catalog consome `order.placed` (consumidor Kafka genérico novo em BuildingBlocks.Messaging) e baixa o estoque tudo ou nada, idempotente por `StockReservation`; publica `stock.reserved`/`stock.rejected` com motivo.
 - Orders consome os dois e marca o pedido `Confirmed`/`Rejected`. Última unidade disputada: `rowversion` + nova tentativa → nunca estoque negativo.

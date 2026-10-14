@@ -1,5 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import type { Cart, CartItem } from '../api/cart'
+import { placeFakeOrder } from './orders'
+import type { Product } from '../api/products'
 import { findFakeProduct } from './products'
 import { userIdFromAuthorization } from './tokens'
 
@@ -14,6 +16,17 @@ export function resetFakeCarts() {
 export function seedFakeCart(userId: string, items: CartItem[]) {
   carts.set(userId, items.map((i) => ({ ...i })))
 }
+
+/** Item de carrinho de um produto de exemplo, com subtotal calculado. */
+export const cartItem = (product: Product, quantity: number): CartItem => ({
+  productId: product.id,
+  sellerId: product.sellerId,
+  productName: product.name,
+  unitPrice: product.price,
+  currency: product.currency,
+  quantity,
+  subtotal: Math.round(product.price * quantity * 100) / 100,
+})
 
 const toCart = (items: CartItem[]): Cart => ({
   items,
@@ -88,5 +101,15 @@ export const cartHandlers = [
     if (!items.some((i) => i.productId === params.productId)) return notFound('cart.item_not_found')
     carts.set(userId, items.filter((i) => i.productId !== params.productId))
     return HttpResponse.json(toCart(carts.get(userId)!))
+  }),
+
+  http.post('/api/cart/checkout', ({ request }) => {
+    const userId = userIdFromAuthorization(request.headers.get('Authorization'))
+    if (!userId) return new HttpResponse(null, { status: 401 })
+    const items = carts.get(userId) ?? []
+    if (items.length === 0) return validation('cart', 'The cart is empty.')
+    const orderId = placeFakeOrder(userId, items)
+    carts.set(userId, [])
+    return HttpResponse.json({ checkoutId: orderId, orderId }, { status: 202 })
   }),
 ]

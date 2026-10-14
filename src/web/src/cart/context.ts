@@ -10,6 +10,8 @@ export interface CartContextValue {
   add: (productId: string, quantity?: number) => Promise<void>
   changeQuantity: (productId: string, quantity: number) => Promise<void>
   remove: (productId: string) => Promise<void>
+  /** Finaliza o pedido e devolve o id dele; o carrinho fica vazio. */
+  checkout: () => Promise<string>
 }
 
 export const CartContext = createContext<CartContextValue | null>(null)

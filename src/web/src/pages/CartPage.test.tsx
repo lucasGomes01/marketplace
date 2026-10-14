@@ -1,7 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { CartItem } from '../api/cart'
-import { seedFakeCart } from '../test/cart'
+import { cartItem, seedFakeCart } from '../test/cart'
 import { sampleProducts } from '../test/products'
 import { renderApp } from '../test/render'
 import { buyerUserId } from '../test/tokens'
@@ -9,15 +8,7 @@ import { buyerUserId } from '../test/tokens'
 const drill = sampleProducts[2] // 199,90 · estoque 5
 const wrench = sampleProducts[1] // 89,50 · estoque 2
 
-const item = (product: (typeof sampleProducts)[number], quantity: number): CartItem => ({
-  productId: product.id,
-  sellerId: product.sellerId,
-  productName: product.name,
-  unitPrice: product.price,
-  currency: product.currency,
-  quantity,
-  subtotal: Math.round(product.price * quantity * 100) / 100,
-})
+const item = cartItem
 
 const row = (name: string) => screen.getByRole('listitem', { name })
 
@@ -45,7 +36,7 @@ describe('CartPage', () => {
     expect(within(drillRow).getByText(/R\$\s399,80/)).toBeInTheDocument()
     expect(screen.getByText('3 itens')).toBeInTheDocument()
     expect(screen.getByTestId('cart-total')).toHaveTextContent(/R\$\s489,30/)
-    expect(screen.getByRole('button', { name: /Finalizar pedido/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Finalizar pedido' })).toBeEnabled()
   })
 
   it('increases and decreases quantities', async () => {
