@@ -19,7 +19,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const controller = new AbortController()
     cartApi
       .get(token, controller.signal)
-      .then((result) => setLoaded({ token, cart: result }))
+      // Se uma operação (ex.: adicionar) já respondeu nesta sessão, ela é mais nova: a carga inicial não sobrescreve.
+      .then((result) => setLoaded((current) => (current?.token === token ? current : { token, cart: result })))
       .catch(() => {
         // Sem carrinho visível; as telas que dependem dele mostram o próprio erro ao operar.
       })

@@ -55,7 +55,7 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 ## Fase 5 — Qualidade do fluxo completo
 | ID | Tarefa | Serviço | Depende | Status |
 |---|---|---|---|---|
-| T-016 | Teste E2E do caminho feliz (Playwright) rodando no CI com `docker compose` | Infra | T-015 | todo |
+| T-016 | Teste E2E do caminho feliz (Playwright) rodando no CI com `docker compose` | Infra | T-015 | done |
 
 ## Ideias (pós-MVP)
 | ID | Ideia | Status |

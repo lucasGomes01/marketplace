@@ -41,6 +41,50 @@ describe('ProductPage', () => {
     expect(within(header()).getByRole('link', { name: 'Carrinho (1)' })).toBeInTheDocument()
   })
 
+  it('keeps the added item when the initial cart load answers late', async () => {
+    // Bug achado pelo E2E: a carga inicial do carrinho (vazio) chegava depois do "adicionar" e apagava o item.
+    let releaseInitialLoad = () => {}
+    const initialLoad = new Promise<void>((resolve) => (releaseInitialLoad = resolve))
+    server.use(
+      http.get('/api/cart', async () => {
+        await initialLoad
+        return HttpResponse.json({ items: [], totalQuantity: 0, total: 0, currency: 'BRL' })
+      }, { once: true }),
+    )
+    const { user } = renderApp(`/produtos/${drill.id}`, { loggedIn: 'buyer' })
+    await screen.findByRole('heading', { name: drill.name })
+    await within(header()).findByRole('button', { name: 'Sair' })
+
+    await user.click(screen.getByRole('button', { name: 'Adicionar ao carrinho' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Adicionado ao carrinho')
+    releaseInitialLoad()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(within(header()).getByRole('link', { name: 'Carrinho (1)' })).toBeInTheDocument()
+  })
+
+  it('waits for the session before letting people add to the cart', async () => {
+    // Bug achado pelo E2E: clicar enquanto a sessão ainda carregava mandava para o login e o item se perdia.
+    let releaseSession = () => {}
+    const session = new Promise<void>((resolve) => (releaseSession = resolve))
+    server.use(
+      http.get('/api/users/me', async ({ request }) => {
+        await session
+        const passthrough = await fetch(new Request(request.url, { headers: request.headers }))
+        return passthrough
+      }, { once: true }),
+    )
+    const { user } = renderApp(`/produtos/${drill.id}`, { loggedIn: 'buyer' })
+    await screen.findByRole('heading', { name: drill.name })
+
+    expect(screen.getByRole('button', { name: 'Adicionar ao carrinho' })).toBeDisabled()
+
+    releaseSession()
+    await within(header()).findByRole('button', { name: 'Sair' })
+    await user.click(screen.getByRole('button', { name: 'Adicionar ao carrinho' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Adicionado ao carrinho')
+  })
+
   it('sends anonymous people to log in and back', async () => {
     const { user } = renderApp(`/produtos/${drill.id}`)
 

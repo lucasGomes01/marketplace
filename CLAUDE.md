@@ -11,6 +11,7 @@ Antes de qualquer tarefa, leia `.ai/README.md` e siga o protocolo de trabalho de
   integração (testcontainers-go): adicione `-v //var/run/docker.sock:/var/run/docker.sock -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal -e TESTCONTAINERS_RYUK_DISABLED=true` e tire o `-short`.
   Kafka nos testes Go: use `confluentinc/confluent-local:7.5.0` (a única imagem que o módulo testcontainers-go v0.44 suporta).
 - Web: `cd src/web && npm run dev` / `npm test` / `npm run lint` / `npm run build`
+- E2E (Playwright, precisa do compose com `--profile apps` no ar): `cd e2e && npm ci && npx playwright install chromium && npm run wait-for-stack && npm test`
 - Infra: `docker compose up -d` · tudo: `docker compose --profile apps up -d --build`
 
 ## Portas locais

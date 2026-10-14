@@ -2,6 +2,11 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-14 — T-016 E2E com Playwright no CI
+- `e2e/`: o caminho feliz inteiro pelo navegador contra o compose (vender → comprar → Confirmado → Meus pedidos → estoque baixou). Job `e2e` no CI.
+- O E2E achou 2 corridas reais no front (carrinho sobrescrito pela carga inicial; clique antes da sessão carregar) → corrigidas com testes. 75 testes de front.
+- **MVP concluído (Fases 0–5).** Próximos passos são as ideias pós-MVP do BACKLOG.
+
 ## 2026-10-14 — T-015 Telas de pedido
 - Carrinho com "Finalizar pedido" → `/pedidos/:id` acompanha o status (Processando → Confirmado | Recusado com motivo); "Meus pedidos" em `/pedidos` e no cabeçalho.
 - 73 testes de front. Verificado no navegador contra o compose (confirmado e recusado).

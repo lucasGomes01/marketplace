@@ -41,7 +41,13 @@ export function AddToCartButton({ product }: { product: Product }) {
 
   return (
     <div className="add-to-cart">
-      <button type="button" className="button button--primary" onClick={handleClick} disabled={adding}>
+      {/* Enquanto a sessão carrega não dá para saber se é login ou compra: espera em vez de mandar para o login. */}
+      <button
+        type="button"
+        className="button button--primary"
+        onClick={handleClick}
+        disabled={adding || state.status === 'loading'}
+      >
         {adding ? 'Adicionando…' : 'Adicionar ao carrinho'}
       </button>
       {message?.kind === 'success' ? (
