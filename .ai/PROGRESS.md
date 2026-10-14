@@ -2,6 +2,11 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-14 — T-020 Testes de carga (k6)
+- `load/`: 4 cenários em k6 via Docker na rede do compose. Navegação, compra e disputa passam nos limites; disputa prova 10 confirmados de 10 unidades com 100 compradores simultâneos.
+- Estresse: degrada perto de ~800 req/s nesta máquina; gargalo é o Catalog (CPU), seguido do gateway e do SQL Server. Linha de base em `load/README.md`.
+- Ideias que saem daqui: cache na vitrine (I-12), mais réplicas do Catalog, partições/consumidores para o atraso de confirmação sob carga.
+
 ## 2026-10-14 — T-016 E2E com Playwright no CI
 - `e2e/`: o caminho feliz inteiro pelo navegador contra o compose (vender → comprar → Confirmado → Meus pedidos → estoque baixou). Job `e2e` no CI.
 - O E2E achou 2 corridas reais no front (carrinho sobrescrito pela carga inicial; clique antes da sessão carregar) → corrigidas com testes. 75 testes de front.

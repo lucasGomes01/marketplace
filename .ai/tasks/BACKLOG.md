@@ -57,6 +57,11 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 |---|---|---|---|---|
 | T-016 | Teste E2E do caminho feliz (Playwright) rodando no CI com `docker compose` | Infra | T-015 | done |
 
+## Fase 6 — Pós-MVP
+| ID | Tarefa | Serviço | Depende | Status |
+|---|---|---|---|---|
+| T-020 | Testes de carga com k6 (navegação, compra, disputa de estoque, estresse) + linha de base | Infra | T-016 | done |
+
 ## Ideias (pós-MVP)
 | ID | Ideia | Status |
 |---|---|---|
@@ -70,4 +75,5 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | I-08 | Rate limit nas tentativas de login (no gateway ou no Users) + refresh token | idea |
 | I-11 | Dead-letter topic (`<tópico>.dlq`) para eventos inválidos, em vez de só registrar no log e pular | idea |
 | I-10 | Investigar falha intermitente dos testes de integração com a suíte inteira em paralelo (vários SQL Server + Kafka). Visto 2× em 2026-10-13, não reproduzido em 6 rodadas seguidas. O CI agora guarda os resultados detalhados quando falha | idea |
+| I-12 | Cache da vitrine (`GET /products`) — o teste de estresse (T-020) mostrou o Catalog como primeiro gargalo | idea |
 | I-09 | Erros com **códigos** para o front traduzir sem regex. Já existem no `Result` (T-018) e saem em 401/404/409; falta expô-los no 400 de validação e usar no front | idea |

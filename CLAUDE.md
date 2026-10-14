@@ -12,6 +12,7 @@ Antes de qualquer tarefa, leia `.ai/README.md` e siga o protocolo de trabalho de
   Kafka nos testes Go: use `confluentinc/confluent-local:7.5.0` (a única imagem que o módulo testcontainers-go v0.44 suporta).
 - Web: `cd src/web && npm run dev` / `npm test` / `npm run lint` / `npm run build`
 - E2E (Playwright, precisa do compose com `--profile apps` no ar): `cd e2e && npm ci && npx playwright install chromium && npm run wait-for-stack && npm test`
+- Carga (k6 em Docker, compose no ar): `load/run.sh navegacao|compra|disputa|estresse` — ver `load/README.md`
 - Infra: `docker compose up -d` · tudo: `docker compose --profile apps up -d --build`
 
 ## Portas locais
