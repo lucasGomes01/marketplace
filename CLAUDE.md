@@ -15,5 +15,12 @@ Antes de qualquer tarefa, leia `.ai/README.md` e siga o protocolo de trabalho de
 - Carga (k6 em Docker, compose no ar): `load/run.sh navegacao|compra|disputa|estresse` — ver `load/README.md`
 - Infra: `docker compose up -d` · tudo: `docker compose --profile apps up -d --build`
 
+## Limpeza do Docker
+- Containers que **devem** existir: os 9 do compose (`marketplace-*`); `kafka-init` fica `Exited (0)` — é normal (só cria os tópicos).
+- Testes de integração criam containers temporários (Testcontainers). Se a execução é interrompida (Docker cai, Ctrl+C),
+  sobram containers com nome aleatório. Limpar: `docker container prune -f --filter label=org.testcontainers=true`
+  e depois `docker volume prune -f` (volumes anônimos sem container).
+- Teste de carga travado: `docker stop k6-<cenário>`.
+
 ## Portas locais
 Gateway 5000 · Users 5001 · Catalog 5002 · Cart 5003 · Orders 5004 · Web 5173 · Kafka 9092 (localhost) · Kafka UI 8080
