@@ -9,7 +9,7 @@ seu banco, um gateway na frente e o Kafka levando os fatos de um serviço para o
 ## Arquitetura
 
 ```mermaid
-flowchart TB
+flowchart LR
     web["Navegador · React<br/>TypeScript + Vite · :5173"]
     gw["Gateway · YARP<br/>.NET 10 · :5000"]
 
