@@ -2,6 +2,10 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-16 — T-021 Gateway em Produção e cache da vitrine
+- Compose em Production (migrações mantidas), sem log por requisição (YARP, EF Core). Output cache de 5 s no gateway só para leituras públicas do catálogo.
+- Estresse: antes quebrava aos 1m58s; depois chega a 2000 req/s com p95 2,5 ms (melhor caso: poucas URLs, quase tudo do cache).
+
 ## 2026-10-14 — T-020 Testes de carga (k6)
 - `load/`: 4 cenários em k6 via Docker na rede do compose. Navegação, compra e disputa passam nos limites; disputa prova 10 confirmados de 10 unidades com 100 compradores simultâneos.
 - Estresse: degrada perto de ~800 req/s nesta máquina; gargalo é o Catalog (CPU), seguido do gateway e do SQL Server. Linha de base em `load/README.md`.

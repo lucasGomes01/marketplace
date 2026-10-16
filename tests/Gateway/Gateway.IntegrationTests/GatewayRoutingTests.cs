@@ -18,13 +18,19 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>, IAsyncLifet
     private static readonly string[] Clusters = ["users", "catalog", "cart", "orders"];
     private WebApplication? _echo;
     private string _echoUrl = string.Empty;
+    private int _hits;
 
     async Task IAsyncLifetime.InitializeAsync()
     {
         var builder = WebApplication.CreateSlimBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         _echo = builder.Build();
-        _echo.Run(ctx => ctx.Response.WriteAsync($"{ctx.Request.Path}{ctx.Request.QueryString}"));
+        _echo.Run(ctx =>
+        {
+            // Conta as chamadas que chegam ao serviço: resposta vinda do cache do gateway repete o número.
+            ctx.Response.Headers["X-Upstream-Hit"] = Interlocked.Increment(ref _hits).ToString();
+            return ctx.Response.WriteAsync($"{ctx.Request.Path}{ctx.Request.QueryString}");
+        });
         await _echo.StartAsync();
         _echoUrl = _echo.Services.GetRequiredService<IServer>().Features
             .Get<IServerAddressesFeature>()!.Addresses.Single();

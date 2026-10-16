@@ -55,6 +55,9 @@ test('caminho feliz: vender, comprar e ver o pedido confirmado', async ({ page }
   await expect(row).toContainText('Confirmado')
   await expect(row).toContainText('2 itens')
 
-  await page.goto(productUrl)
-  await expect(page.getByText('Última unidade')).toBeVisible()
+  // O gateway guarda a página do produto por alguns segundos (cache): recarrega até o estoque novo aparecer.
+  await expect(async () => {
+    await page.goto(productUrl)
+    await expect(page.getByText('Última unidade')).toBeVisible({ timeout: 1_000 })
+  }).toPass({ timeout: 20_000 })
 })

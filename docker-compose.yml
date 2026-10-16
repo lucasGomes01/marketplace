@@ -5,7 +5,9 @@ name: marketplace
 x-dotnet-service: &dotnet-service
   profiles: [apps]
   environment: &dotnet-env
-    ASPNETCORE_ENVIRONMENT: Development
+    # Production: sem log detalhado por requisição. As migrações continuam automáticas no compose.
+    ASPNETCORE_ENVIRONMENT: Production
+    Database__MigrateOnStartup: "true"
     Kafka__BootstrapServers: kafka:19092
     Jwt__Issuer: marketplace-users
     Jwt__Audience: marketplace

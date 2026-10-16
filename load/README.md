@@ -45,6 +45,10 @@ O resumo sai no terminal e em `load/results/<cenário>.json` (ignorado pelo git)
 | disputa (100 × 10 unidades) | ✓ exatamente 10 confirmados, 90 recusados, estoque 0 |
 | estresse | degrada perto de **~800 req/s pedidas** (p95 passou de 1 s aos ~98 s; 3250 requisições descartadas). Gargalo: **Catalog** (~1 núcleo, 97%), **gateway** (91%) e SQL Server (85%) |
 
+**Depois da T-021** (modo Produção + cache de 5 s na vitrine, 2026-10-16): o `estresse` chegou ao fim (2000 req/s) com
+p95 2,5 ms e nenhuma requisição descartada — antes, no mesmo dia, quebrava aos 1m58s. O cenário lê poucas URLs, então
+quase tudo vem do cache (melhor caso).
+
 No `compra`, o tempo até confirmar cresce sob carga (mediana 0,5 s → p95 4,6 s): fila nos consumidores Kafka.
 
 ## Cuidados

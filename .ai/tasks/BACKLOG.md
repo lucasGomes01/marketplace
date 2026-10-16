@@ -61,6 +61,7 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | ID | Tarefa | Serviço | Depende | Status |
 |---|---|---|---|---|
 | T-020 | Testes de carga com k6 (navegação, compra, disputa de estoque, estresse) + linha de base | Infra | T-016 | done |
+| T-021 | Gateway: modo Produção (sem log por requisição) e cache de 5 s na vitrine | Gateway + Infra | T-020 | done |
 
 ## Ideias (pós-MVP)
 | ID | Ideia | Status |
@@ -76,4 +77,5 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | I-11 | Dead-letter topic (`<tópico>.dlq`) para eventos inválidos, em vez de só registrar no log e pular | idea |
 | I-10 | Investigar falha intermitente dos testes de integração com a suíte inteira em paralelo (vários SQL Server + Kafka). Visto 2× em 2026-10-13, não reproduzido em 6 rodadas seguidas. O CI agora guarda os resultados detalhados quando falha | idea |
 | I-12 | Cache da vitrine (`GET /products`) — o teste de estresse (T-020) mostrou o Catalog como primeiro gargalo | idea |
+| I-13 | Imagens de produto: MinIO no compose (API S3; em produção S3 privado + CloudFront com OAC), upload direto do browser via presigned URL gerada pelo Catalog, `ImageKey` no `Product` (só a referência, nunca o binário), chaves imutáveis (`products/{id}/{hash}.webp`) com `Cache-Control: public, max-age=31536000, immutable`, thumbnails para a listagem e exibição no web. Imagem **não** passa pelo Gateway | done (T-021, em memória no gateway) |
 | I-09 | Erros com **códigos** para o front traduzir sem regex. Já existem no `Result` (T-018) e saem em 401/404/409; falta expô-los no 400 de validação e usar no front | idea |
