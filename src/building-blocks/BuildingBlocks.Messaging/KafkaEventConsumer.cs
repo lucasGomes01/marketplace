@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using BuildingBlocks.Application.Messaging;
 using Confluent.Kafka;
@@ -65,6 +66,8 @@ public sealed class KafkaEventConsumer<TEvent>(
     /// <returns>true se a mensagem terminou (processada ou pulada); false se o serviço está parando.</returns>
     private async Task<bool> ProcessAsync(ConsumeResult<string, string> result, CancellationToken stoppingToken)
     {
+        // Continua o trace de quem publicou; os spans de banco/HTTP do handler ficam dentro deste.
+        using var activity = KafkaTracing.StartProcess(topic, result.Message.Headers);
         EventEnvelope<TEvent>? envelope;
         try
         {
@@ -101,6 +104,7 @@ public sealed class KafkaEventConsumer<TEvent>(
             }
             catch (Exception ex)
             {
+                activity?.AddEvent(new ActivityEvent("retry", tags: new ActivityTagsCollection { ["exception.message"] = ex.Message }));
                 var wait = Backoff(attempt);
                 logger.LogWarning(ex, "Failed {EventType} {EventId} (attempt {Attempt}); retrying in {Wait}",
                     envelope.Type, envelope.EventId, attempt + 1, wait);

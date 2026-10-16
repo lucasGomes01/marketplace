@@ -72,6 +72,13 @@ internal/messaging/       consumer/producer Kafka (franz-go)
    `rowversion` em `Products` resolve a disputa pela última unidade) → publica `stock.reserved` ou `stock.rejected`.
 4. O Orders consome → `Confirmed` ou `Rejected`.
 
+## Observabilidade (T-022)
+- OpenTelemetry em todos os serviços (.NET: `BuildingBlocks.Observability`; Go: `internal/telemetry`), exportando OTLP
+  para o serviço `observability` (Grafana + Prometheus + Tempo + Loki). Sem `OTEL_EXPORTER_OTLP_ENDPOINT`, nada é exportado.
+- O trace atravessa o Kafka: quem publica grava `traceparent` (W3C) nos headers; quem consome continua o trace.
+- Métricas de negócio: `marketplace.orders{status}`, `marketplace.order.settle.duration`, `marketplace.stock.reservations{outcome}`.
+- Testes de carga (k6) vão para o mesmo Prometheus com `versao`/`cenario` — painel "Marketplace" compara versões.
+
 ## Autenticação
 O Users emite o JWT (HS256 no MVP; chave em config). Cada serviço valida o JWT (mesma chave e issuer).
 Claims: `sub` (userId), `email`, `role` — **um claim por papel ativo** (`["Buyer"]` ou `["Buyer","Seller"]`).

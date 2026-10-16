@@ -5,6 +5,7 @@
     <Project Path="src/building-blocks/BuildingBlocks.Application/BuildingBlocks.Application.csproj" />
     <Project Path="src/building-blocks/BuildingBlocks.Auth/BuildingBlocks.Auth.csproj" />
     <Project Path="src/building-blocks/BuildingBlocks.Messaging/BuildingBlocks.Messaging.csproj" />
+    <Project Path="src/building-blocks/BuildingBlocks.Observability/BuildingBlocks.Observability.csproj" />
   </Folder>
   <Folder Name="/src/gateway/">
     <Project Path="src/gateway/Gateway/Gateway.csproj" />

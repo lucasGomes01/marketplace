@@ -1,10 +1,12 @@
 using BuildingBlocks.Api;
 using BuildingBlocks.Auth;
+using BuildingBlocks.Observability;
 using Cart.Api.Endpoints;
 using Cart.Application;
 using Cart.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddMarketplaceObservability("cart");
 
 // Composition root (ADR-004).
 builder.Services.AddOpenApi();

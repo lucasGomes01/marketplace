@@ -13,14 +13,16 @@ Antes de qualquer tarefa, leia `.ai/README.md` e siga o protocolo de trabalho de
 - Web: `cd src/web && npm run dev` / `npm test` / `npm run lint` / `npm run build`
 - E2E (Playwright, precisa do compose com `--profile apps` no ar): `cd e2e && npm ci && npx playwright install chromium && npm run wait-for-stack && npm test`
 - Carga (k6 em Docker, compose no ar): `load/run.sh navegacao|compra|disputa|estresse` — ver `load/README.md`
+- Observabilidade: Grafana em http://localhost:3000 (painel "Marketplace"). Painel gerado por `node observability/build-dashboard.mjs`.
+  Docker Desktop com pouca memória: construa as imagens uma a uma (`docker compose --profile apps build <serviço>`).
 - Infra: `docker compose up -d` · tudo: `docker compose --profile apps up -d --build`
 
 ## Limpeza do Docker
-- Containers que **devem** existir: os 9 do compose (`marketplace-*`); `kafka-init` fica `Exited (0)` — é normal (só cria os tópicos).
+- Containers que **devem** existir: os 10 do compose (`marketplace-*`); `kafka-init` fica `Exited (0)` — é normal (só cria os tópicos).
 - Testes de integração criam containers temporários (Testcontainers). Se a execução é interrompida (Docker cai, Ctrl+C),
   sobram containers com nome aleatório. Limpar: `docker container prune -f --filter label=org.testcontainers=true`
   e depois `docker volume prune -f` (volumes anônimos sem container).
 - Teste de carga travado: `docker stop k6-<cenário>`.
 
 ## Portas locais
-Gateway 5000 · Users 5001 · Catalog 5002 · Cart 5003 · Orders 5004 · Web 5173 · Kafka 9092 (localhost) · Kafka UI 8080
+Gateway 5000 · Users 5001 · Catalog 5002 · Cart 5003 · Orders 5004 · Web 5173 · Kafka 9092 (localhost) · Kafka UI 8080 · Grafana 3000 · Prometheus 9090 · OTLP 4317/4318

@@ -1,0 +1,9 @@
+# Painéis do marketplace carregados no Grafana ao subir (pasta "Marketplace"). Edite o JSON em observability/dashboards.
+apiVersion: 1
+providers:
+  - name: marketplace
+    folder: Marketplace
+    type: file
+    allowUiUpdates: true
+    options:
+      path: /otel-lgtm/marketplace-dashboards

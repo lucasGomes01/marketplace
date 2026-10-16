@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/plugin/kotel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Envelope de todo evento: { eventId, type, occurredAt, data }.
@@ -25,6 +27,14 @@ const (
 	headerEventType = "event-type"
 	headerEventID   = "event-id"
 )
+
+// tracer cria os spans de envio/consumo e grava/lê o traceparent (W3C) nos headers — o mesmo formato do
+// BuildingBlocks.Messaging (.NET), então um trace atravessa os serviços. Usa os provedores globais do OpenTelemetry
+// (no-op sem telemetria ligada).
+func tracer() *kotel.Tracer { return kotel.NewTracer() }
+
+// Tracing é a opção do cliente franz-go que liga os hooks de trace (use também no cliente do Publisher).
+func Tracing() kgo.Opt { return kgo.WithHooks(kotel.NewKotel(kotel.WithTracer(tracer())).Hooks()...) }
 
 // Publisher publica eventos no tópico de mesmo nome do tipo.
 type Publisher struct {
@@ -79,6 +89,7 @@ func IsPermanent(err error) bool { return errors.As(err, new(permanentError)) }
 // handler terminou (com sucesso ou com erro permanente). Mensagens de uma partição são processadas em ordem.
 type Consumer struct {
 	client *kgo.Client
+	tracer *kotel.Tracer
 	handle Handler
 	log    *slog.Logger
 }
@@ -87,7 +98,9 @@ func NewConsumer(brokers []string, group string, topics []string, handle Handler
 	if log == nil {
 		log = slog.Default()
 	}
+	trace := tracer()
 	client, err := kgo.NewClient(
+		kgo.WithHooks(kotel.NewKotel(kotel.WithTracer(trace)).Hooks()...),
 		kgo.SeedBrokers(brokers...),
 		kgo.ConsumerGroup(group),
 		kgo.ConsumeTopics(topics...),
@@ -97,7 +110,7 @@ func NewConsumer(brokers []string, group string, topics []string, handle Handler
 	if err != nil {
 		return nil, err
 	}
-	return &Consumer{client: client, handle: handle, log: log}, nil
+	return &Consumer{client: client, tracer: trace, handle: handle, log: log}, nil
 }
 
 // Run consome até o contexto ser cancelado.
@@ -132,6 +145,11 @@ func (c *Consumer) commit(ctx context.Context, record *kgo.Record) {
 
 // process devolve false só se o contexto foi cancelado antes de concluir.
 func (c *Consumer) process(ctx context.Context, record *kgo.Record) bool {
+	// Span de processamento filho do span de quem publicou; banco e publicações do handler ficam dentro dele.
+	_, span := c.tracer.WithProcessSpan(record)
+	defer span.End()
+	ctx = trace.ContextWithSpan(ctx, span) // mantém o cancelamento do consumidor
+
 	var env Envelope
 	if err := json.Unmarshal(record.Value, &env); err != nil {
 		c.log.Error("skipping malformed message", "topic", record.Topic, "offset", record.Offset, "error", err)
