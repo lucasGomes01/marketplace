@@ -22,6 +22,7 @@ import (
 	"marketplace/orders/internal/messaging"
 	"marketplace/orders/internal/order"
 	"marketplace/orders/internal/store"
+	"marketplace/orders/internal/telemetry"
 )
 
 // consumerGroup segue a convenção "um grupo por serviço" (.ai/context/events.md).
@@ -61,10 +62,21 @@ func env(key, fallback string) string {
 	return fallback
 }
 
+const serviceName = "orders"
+
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	shutdownTelemetry, err := telemetry.Setup(context.Background(), serviceName)
+	if err != nil {
+		slog.Error("telemetry setup failed", "error", err)
+		os.Exit(1)
+	}
+	logger := telemetry.Logger(serviceName)
 	slog.SetDefault(logger)
-	if err := run(logger); err != nil {
+	err = run(logger)
+	flush, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_ = shutdownTelemetry(flush)
+	if err != nil {
 		logger.Error("orders stopped", "error", err)
 		os.Exit(1)
 	}
@@ -87,7 +99,7 @@ func run(logger *slog.Logger) error {
 	}
 	defer orders.Close()
 
-	producer, err := kgo.NewClient(kgo.SeedBrokers(cfg.brokers...))
+	producer, err := kgo.NewClient(kgo.SeedBrokers(cfg.brokers...), messaging.Tracing())
 	if err != nil {
 		return fmt.Errorf("kafka producer: %w", err)
 	}
@@ -105,7 +117,7 @@ func run(logger *slog.Logger) error {
 	consumerDone := make(chan error, 1)
 	go func() { consumerDone <- consumer.Run(ctx) }()
 
-	server := &http.Server{Addr: cfg.addr, Handler: api.NewRouter(service, cfg.auth, time.Now), ReadHeaderTimeout: 5 * time.Second}
+	server := &http.Server{Addr: cfg.addr, Handler: telemetry.HTTP(api.NewRouter(service, cfg.auth, time.Now)), ReadHeaderTimeout: 5 * time.Second}
 	serverDone := make(chan error, 1)
 	go func() { serverDone <- server.ListenAndServe() }()
 	logger.Info("orders service started", "addr", cfg.addr, "brokers", cfg.brokers, "group", consumerGroup)

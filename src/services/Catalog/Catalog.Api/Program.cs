@@ -1,10 +1,12 @@
 using BuildingBlocks.Api;
 using BuildingBlocks.Auth;
+using BuildingBlocks.Observability;
 using Catalog.Api.Endpoints;
 using Catalog.Application;
 using Catalog.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddMarketplaceObservability("catalog");
 
 // Composition root (ADR-004).
 builder.Services.AddOpenApi();

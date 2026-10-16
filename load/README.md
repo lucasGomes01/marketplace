@@ -18,6 +18,20 @@ docker stop k6-lentidao        # para qualquer cenário antes do fim (container 
 
 O resumo sai no terminal e em `load/results/<cenário>.json` (ignorado pelo git).
 
+## Comparar versões no Grafana
+
+Com o compose no ar, cada execução vai para o Grafana (painel **Marketplace**, http://localhost:3000) com a etiqueta
+`versao` (padrão: commit atual) e uma marca laranja no início e no fim. Para um experimento:
+
+```bash
+VERSAO=1-catalog  load/run.sh estresse
+# ... aplique a mudança que quer medir (ex.: cache, mais cópias de um serviço) e suba de novo ...
+VERSAO=com-cache  load/run.sh estresse
+```
+
+No painel, escolha as duas versões e um período que cubra as duas execuções: "Pico de requisições/s" e "Pior p95"
+mostram o resultado lado a lado.
+
 ## Cenários
 
 | Cenário | O que prova | Limites (thresholds) |

@@ -93,10 +93,11 @@ type Service struct {
 	repo  Repository
 	pub   Publisher
 	clock func() time.Time
+	stats metrics
 }
 
 func NewService(repo Repository, pub Publisher, clock func() time.Time) *Service {
-	return &Service{repo: repo, pub: pub, clock: clock}
+	return &Service{repo: repo, pub: pub, clock: clock, stats: newMetrics()}
 }
 
 // PlaceOrder cria o pedido a partir do checkout (id do pedido = checkoutId) e publica order.placed.
@@ -126,6 +127,8 @@ func (s *Service) PlaceOrder(ctx context.Context, event CartCheckedOut) (*order.
 		}
 	case err != nil:
 		return nil, fmt.Errorf("store order: %w", err)
+	default:
+		s.stats.placed(ctx)
 	}
 
 	if err := s.pub.Publish(ctx, EventOrderPlaced, o.ID, o.ID, placedEvent(o)); err != nil {
@@ -172,6 +175,7 @@ func (s *Service) transition(ctx context.Context, orderID string, apply func(*or
 	if err := s.repo.UpdateStatus(ctx, o); err != nil {
 		return fmt.Errorf("update order: %w", err)
 	}
+	s.stats.resolved(ctx, o, s.clock())
 	return nil
 }
 

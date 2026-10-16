@@ -28,6 +28,7 @@ flowchart LR
     end
 
     kafka{{"Kafka 4.1 (KRaft) · Kafka UI :8080<br/>cart.checked-out · order.placed<br/>stock.reserved · stock.rejected"}}
+    obs[("Grafana · :3000<br/>Prometheus · Tempo · Loki")]
 
     web -- "/api/* + JWT" --> gw
     gw --> users & catalog & cart & orders
@@ -41,6 +42,7 @@ flowchart LR
     cart -. publica .-> kafka
     kafka -. consome/publica .- orders
     kafka -. consome/publica .- catalog
+    servicos -. "traces, métricas, logs (OTLP)" .-> obs
 ```
 
 Ninguém lê o banco de outro serviço. O que um serviço precisa saber de outro chega por HTTP (quando a resposta é
@@ -134,6 +136,14 @@ O Users emite um JWT (HS256) com `sub`, `email` e um claim `role` por papel ativ
 "Começar a vender". Cada serviço valida o token sozinho, com a mesma chave e emissor; o Orders valida em Go só com a
 biblioteca padrão.
 
+### Observabilidade
+
+Todos os serviços (.NET e Go) usam **OpenTelemetry** e mandam traces, métricas e logs para o **Grafana**
+(http://localhost:3000, painel **Marketplace**). O trace atravessa o Kafka: um checkout aparece como um caminho só,
+do gateway até a confirmação do pedido, com o tempo de cada etapa. O painel mostra taxa, erros e duração por serviço
+e por cópia, pedidos por status, tempo até o pedido ser resolvido e os testes de carga do k6 por versão, para comparar
+o antes e depois de cada mudança ([`load/README.md`](load/README.md)).
+
 ### Qualidade
 
 | Camada de teste | Ferramenta | O que cobre |
@@ -152,7 +162,7 @@ compradores disputando 10 unidades resultam em exatamente 10 pedidos confirmados
 ## Rodando localmente
 ```bash
 cp .env.example .env
-docker compose up -d                           # SQL Server + Kafka (UI em :8080)
+docker compose up -d                           # SQL Server + Kafka (UI em :8080) + Grafana (:3000)
 dotnet test                                    # testes .NET (precisa do Docker)
 cd src/web && npm install && npm run dev       # front
 ```

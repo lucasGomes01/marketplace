@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using BuildingBlocks.Application.Messaging;
 using Catalog.Application.Abstractions;
 using Catalog.Application.ReserveStock;
@@ -142,6 +143,36 @@ public class ReserveStockHandlerTests
         await Assert.ThrowsAsync<StockConcurrencyException>(() => Handle(Order((drill, 1))));
 
         Assert.Empty(_events.Published);
+    }
+
+    [Fact]
+    public async Task Counts_each_new_reservation_by_outcome_for_the_dashboards()
+    {
+        var recorded = new List<string>();
+        using var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (instrument.Name == "marketplace.stock.reservations") l.EnableMeasurementEvents(instrument);
+            },
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, tags, _) =>
+        {
+            foreach (var tag in tags)
+            {
+                if (tag.Key == "outcome") recorded.Add($"{tag.Value}:{value}");
+            }
+        });
+        listener.Start();
+        var drill = AddProduct("Furadeira", 1);
+        var reserved = Order((drill, 1));
+        var rejected = Order((drill, 1)) with { OrderId = Guid.CreateVersion7() };
+
+        await Handle(reserved);
+        await Handle(reserved); // repetido: republica, não conta de novo
+        await Handle(rejected);
+
+        Assert.Equal(["reserved:1", "rejected:1"], recorded);
     }
 
     [Fact]

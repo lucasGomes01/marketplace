@@ -1,11 +1,13 @@
 using BuildingBlocks.Api;
 using System.Text.Json.Serialization;
 using BuildingBlocks.Auth;
+using BuildingBlocks.Observability;
 using Users.Api.Endpoints;
 using Users.Application;
 using Users.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddMarketplaceObservability("users");
 
 // Composition root: o único lugar que conhece Application e Infrastructure ao mesmo tempo (ADR-004).
 builder.Services.AddOpenApi();

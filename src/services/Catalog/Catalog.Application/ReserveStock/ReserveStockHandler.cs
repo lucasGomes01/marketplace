@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using BuildingBlocks.Application.Messaging;
 using Catalog.Application.Abstractions;
 using Catalog.Domain;
@@ -29,6 +30,11 @@ public sealed record StockRejected(Guid OrderId, string Reason, IReadOnlyList<Gu
 public sealed class ReserveStockHandler(IStockStore store, IEventPublisher events, TimeProvider clock)
     : IIntegrationEventHandler<OrderPlaced>
 {
+    // Métrica de negócio para os painéis (exportada pelo OpenTelemetry quando ligado; fonte "Marketplace").
+    private static readonly Meter Meter = new("Marketplace");
+    private static readonly Counter<long> Reservations = Meter.CreateCounter<long>(
+        "marketplace.stock.reservations", description: "Reservas de estoque por resultado: reserved ou rejected.");
+
     public async Task HandleAsync(Guid eventId, OrderPlaced order, CancellationToken cancellationToken)
     {
         if (order.Items is not { Count: > 0 })
@@ -41,6 +47,7 @@ public sealed class ReserveStockHandler(IStockStore store, IEventPublisher event
         {
             reservation = await ReserveAsync(order, cancellationToken);
             await store.SaveAsync(reservation, cancellationToken);
+            Reservations.Add(1, new KeyValuePair<string, object?>("outcome", reservation.Outcome.ToString().ToLowerInvariant()));
         }
 
         await PublishAsync(reservation, cancellationToken);

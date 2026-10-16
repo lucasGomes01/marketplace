@@ -62,6 +62,7 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 |---|---|---|---|---|
 | T-020 | Testes de carga com k6 (navegação, compra, disputa de estoque, estresse) + linha de base | Infra | T-016 | done |
 | T-021 | Gateway: modo Produção (sem log por requisição) e cache de 5 s na vitrine | Gateway + Infra | T-020 | done |
+| T-022 | Observabilidade: OpenTelemetry (.NET e Go, trace atravessando o Kafka) + Grafana com comparação de testes de carga | Todos + Infra | T-021 | done |
 
 ## Ideias (pós-MVP)
 | ID | Ideia | Status |
@@ -70,7 +71,7 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | I-02 | Pagamento em modo teste (Stripe/Mercado Pago) com split para o vendedor | idea |
 | I-03 | Painel do vendedor (vendas, estoque) | idea |
 | I-04 | Avaliações de comprador ↔ vendedor | idea |
-| I-05 | Observabilidade: OpenTelemetry + trace distribuído entre .NET e Go | idea |
+| I-05 | Observabilidade: OpenTelemetry + trace distribuído entre .NET e Go | done (T-022) |
 | I-06 | CD: publicar imagens no GHCR e deploy automático | idea |
 | I-07 | Rotas do gateway: evitar `/api/users/users` → virou **T-004b** | done |
 | I-08 | Rate limit nas tentativas de login (no gateway ou no Users) + refresh token | idea |

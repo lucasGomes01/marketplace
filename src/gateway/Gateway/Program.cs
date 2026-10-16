@@ -1,4 +1,6 @@
+using BuildingBlocks.Observability;
 var builder = WebApplication.CreateBuilder(args);
+builder.AddMarketplaceObservability("gateway");
 
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));

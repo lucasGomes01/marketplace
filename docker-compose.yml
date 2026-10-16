@@ -8,6 +8,10 @@ x-dotnet-service: &dotnet-service
     # Production: sem log detalhado por requisição. As migrações continuam automáticas no compose.
     ASPNETCORE_ENVIRONMENT: Production
     Database__MigrateOnStartup: "true"
+    <<: &otel-env
+      # Traces, métricas e logs vão para o Grafana (serviço observability). Métricas a cada 5 s para os painéis.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://observability:4317
+      OTEL_METRIC_EXPORT_INTERVAL: "5000"
     Kafka__BootstrapServers: kafka:19092
     Jwt__Issuer: marketplace-users
     Jwt__Audience: marketplace
@@ -70,6 +74,18 @@ services:
         done
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --list
 
+  # Observabilidade: Grafana + Prometheus (métricas) + Tempo (traces) + Loki (logs) + coletor OpenTelemetry.
+  # Grafana em http://localhost:3000 (sem login). Histórico no volume, 30 dias de métricas.
+  observability:
+    image: grafana/otel-lgtm:0.36.0
+    ports: ["3000:3000", "4317:4317", "4318:4318", "9090:9090"]
+    environment:
+      PROMETHEUS_EXTRA_ARGS: --storage.tsdb.retention.time=30d
+    volumes:
+      - observability-data:/data
+      - ./observability/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/marketplace.yaml:ro
+      - ./observability/dashboards:/otel-lgtm/marketplace-dashboards:ro
+
   kafka-ui:
     image: ghcr.io/kafbat/kafka-ui:latest
     ports: ["8080:8080"]
@@ -110,6 +126,7 @@ services:
       JWT_ISSUER: marketplace-users
       JWT_AUDIENCE: marketplace
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
+      <<: *otel-env
     depends_on:
       sqlserver: { condition: service_healthy }
       kafka-init: { condition: service_completed_successfully }
@@ -118,6 +135,7 @@ services:
     profiles: [apps]
     build: { context: ., dockerfile: Dockerfile.dotnet, args: { PROJECT: src/gateway/Gateway, ASSEMBLY: Gateway } }
     environment:
+      <<: *otel-env
       ReverseProxy__Clusters__users__Destinations__d1__Address: http://users:8080/
       ReverseProxy__Clusters__catalog__Destinations__d1__Address: http://catalog:8080/
       ReverseProxy__Clusters__cart__Destinations__d1__Address: http://cart:8080/
@@ -128,3 +146,4 @@ services:
 volumes:
   sqlserver-data:
   kafka-data:
+  observability-data:

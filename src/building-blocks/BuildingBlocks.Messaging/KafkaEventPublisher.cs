@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using BuildingBlocks.Application.Messaging;
 using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
@@ -42,6 +43,7 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
     public async Task PublishAsync<T>(string eventType, string key, Guid eventId, T data, CancellationToken cancellationToken)
     {
         var message = KafkaMessages.Create(eventType, key, eventId, _clock.GetUtcNow(), data);
+        using var activity = KafkaTracing.StartPublish(eventType, message.Headers);
         try
         {
             var result = await _producer.ProduceAsync(eventType, message, cancellationToken);
@@ -49,6 +51,7 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
         }
         catch (ProduceException<string, string> ex)
         {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Error.Reason);
             _logger.LogError(ex, "Failed to publish {EventType} {EventId}: {Reason}", eventType, eventId, ex.Error.Reason);
             throw new EventPublishingException($"Could not publish {eventType}: {ex.Error.Reason}", ex);
         }
