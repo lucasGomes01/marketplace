@@ -23,4 +23,4 @@ Vendedor despacha pelo navegador; comprador acompanha a entrega e confirma o rec
 - Nome do vendedor no envio (o Orders só conhece o id), rastreio (I-15), cancelamento (I-14).
 
 ## Notas
-- 89 testes de front verdes (`npm test`), lint e build limpos. Datas em `utils/dates.ts` (saíram da OrderPage).
+- 87 testes de front verdes (`npm test`), lint e build limpos. Datas em `utils/dates.ts` (saíram da OrderPage).
