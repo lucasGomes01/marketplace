@@ -999,3 +999,131 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* Envio (T-025) */
+.badge--shipment-awaitingpicking {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.badge--shipment-picked,
+.badge--shipment-packed {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.badge--shipment-shipped,
+.badge--shipment-delivered {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.delivery {
+  margin-top: 28px;
+}
+
+.delivery h2,
+.shipments__group h2 {
+  font-size: 1.15rem;
+  margin: 0 0 12px;
+}
+
+.delivery__list,
+.shipments__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.shipment {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  margin: 0;
+  max-width: none;
+}
+
+.shipment__header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.shipment__header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.shipment p {
+  margin: 0;
+}
+
+.shipment__items {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.shipment__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.shipment .button {
+  justify-self: start;
+}
+
+.shipments h1 {
+  margin-bottom: 16px;
+}
+
+.shipments__group + .shipments__group {
+  margin-top: 28px;
+}
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.timeline__step {
+  position: relative;
+  padding-left: 22px;
+  color: var(--text-muted);
+}
+
+.timeline__step::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0.45em;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--surface);
+}
+
+.timeline__step--done {
+  color: var(--text);
+}
+
+.timeline__step--done::before {
+  border-color: var(--success);
+  background: var(--success);
+}
+
+.timeline__label {
+  font-weight: 600;
+}
+
+.timeline__time {
+  font-size: 0.85rem;
+}
