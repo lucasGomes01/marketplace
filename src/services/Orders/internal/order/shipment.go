@@ -62,6 +62,21 @@ func (s *Shipment) moveTo(to ShipmentStatus, now time.Time) {
 	}
 }
 
+// ReachedAt diz quando o envio chegou à etapa (zero para AwaitingPicking ou etapa futura).
+func (s Shipment) ReachedAt(status ShipmentStatus) time.Time {
+	switch status {
+	case ShipmentPicked:
+		return s.PickedAt
+	case ShipmentPacked:
+		return s.PackedAt
+	case ShipmentShipped:
+		return s.ShippedAt
+	case ShipmentDelivered:
+		return s.DeliveredAt
+	}
+	return time.Time{}
+}
+
 // Shipment devolve uma cópia do envio do vendedor.
 func (o *Order) Shipment(sellerID string) (Shipment, bool) {
 	if s := o.shipment(sellerID); s != nil {

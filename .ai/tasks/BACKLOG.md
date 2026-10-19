@@ -72,8 +72,8 @@ O vendedor avança até `Shipped`; o **comprador** confirma `Delivered` ("Recebi
 | ID | Tarefa | Serviço | Depende | Status |
 |---|---|---|---|---|
 | T-023 | Domínio `Shipment` em Go: um envio por vendedor, máquina de status, quem pode avançar | Orders | T-012 | done |
-| T-024 | API (`/shipments` do vendedor, "Recebi" do comprador), persistência + backfill, evento `shipment.status-changed`, rota no gateway | Orders + Gateway + Infra | T-023 | doing |
-| T-025 | **Telas:** "Pedidos a despachar" (vendedor) e linha do tempo + "Recebi" em "meus pedidos" (comprador) | Web | T-024 | todo |
+| T-024 | API (`/shipments` do vendedor, "Recebi" do comprador), persistência + backfill, evento `shipment.status-changed`, rota no gateway | Orders + Gateway + Infra | T-023 | done |
+| T-025 | **Telas:** "Pedidos a despachar" (vendedor) e linha do tempo + "Recebi" em "meus pedidos" (comprador) | Web | T-024 | doing |
 | T-026 | E2E estendido: compra → separado → embalado → enviado → recebido | Infra | T-025 | todo |
 
 ## Ideias (pós-MVP)

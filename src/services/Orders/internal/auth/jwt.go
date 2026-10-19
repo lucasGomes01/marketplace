@@ -130,6 +130,17 @@ func FromContext(ctx context.Context) (Claims, bool) {
 	return claims, ok
 }
 
+// RequireRole responde 403 se o token (já validado por Require) não tem o papel — igual às policies do .NET.
+func RequireRole(role string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if claims, ok := FromContext(r.Context()); !ok || !claims.HasRole(role) {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // Require exige "Authorization: Bearer <jwt>" válido; senão responde 401.
 func Require(cfg Config, clock func() time.Time) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {

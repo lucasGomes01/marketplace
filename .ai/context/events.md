@@ -28,6 +28,7 @@ Decisão e porquês em `decisions/ADR-003-kafka.md`.
 | `order.placed` | Orders | `catalog-service` | `orderId` |
 | `stock.reserved` | Catalog | `orders-service` | `orderId` |
 | `stock.rejected` | Catalog | `orders-service` | `orderId` |
+| `shipment.status-changed` | Orders | — (ainda sem consumidor) | `orderId` |
 
 ## cart.checked-out (Cart → Orders)
 Publicado por `POST /api/cart/checkout` (T-010). O carrinho é esvaziado logo depois de publicar.
@@ -58,4 +59,13 @@ Tudo ou nada: se algum item não tem estoque (ou o produto não existe mais), na
 Pedido repetido → o Catalog republica o mesmo resultado (guardado em `StockReservations`), sem baixar de novo.
 ```json
 { "orderId": "guid", "reason": "string", "productIds": ["guid"] }
+```
+
+## shipment.status-changed (Orders → ainda sem consumidor)
+Publicado a cada etapa do envio de um vendedor (T-024): `Picked`, `Packed`, `Shipped` (pelo vendedor) e `Delivered`
+(o comprador confirma). `eventId` = `orderId:sellerId:status` (determinístico). Repetir a requisição com o mesmo status
+**republica** o mesmo evento (corrige uma publicação que falhou depois de gravar; não há outbox, ver I-01).
+`changedAt` = quando a etapa aconteceu (não muda na republicação). Futuro: painel do vendedor (I-03), notificações.
+```json
+{ "orderId": "guid", "buyerId": "guid", "sellerId": "guid", "status": "Shipped", "changedAt": "2026-10-19T12:00:00Z" }
 ```

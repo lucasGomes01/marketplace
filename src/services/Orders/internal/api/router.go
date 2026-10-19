@@ -13,20 +13,27 @@ import (
 	"marketplace/orders/internal/order"
 )
 
-// OrderQueries é o que a API precisa da camada app.
-type OrderQueries interface {
+// OrderService é o que a API precisa da camada app.
+type OrderService interface {
 	OrdersOf(ctx context.Context, buyerID string) ([]*order.Order, error)
 	OrderOf(ctx context.Context, buyerID, id string) (*order.Order, error)
+	ShipmentsOf(ctx context.Context, sellerID string) ([]*order.Order, error)
+	AdvanceShipment(ctx context.Context, sellerID, orderID string, to order.ShipmentStatus) (*order.Order, error)
+	ConfirmDelivery(ctx context.Context, buyerID, orderID, sellerID string) (*order.Order, error)
 }
 
-func NewRouter(queries OrderQueries, authCfg auth.Config, clock func() time.Time) http.Handler {
+func NewRouter(queries OrderService, authCfg auth.Config, clock func() time.Time) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health)
 
 	requireLogin := auth.Require(authCfg, clock)
+	requireSeller := func(next http.HandlerFunc) http.Handler { return requireLogin(auth.RequireRole("Seller", next)) }
 	h := handlers{queries: queries}
 	mux.Handle("GET /orders", requireLogin(http.HandlerFunc(h.list)))
 	mux.Handle("GET /orders/{id}", requireLogin(http.HandlerFunc(h.get)))
+	mux.Handle("POST /orders/{id}/shipments/{sellerId}/delivery", requireLogin(http.HandlerFunc(h.confirmDelivery)))
+	mux.Handle("GET /shipments", requireSeller(h.listShipments))
+	mux.Handle("PUT /shipments/{orderId}/status", requireSeller(h.advanceShipment))
 	return mux
 }
 
@@ -34,7 +41,7 @@ func health(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"service": "orders", "status": "healthy"})
 }
 
-type handlers struct{ queries OrderQueries }
+type handlers struct{ queries OrderService }
 
 func (h handlers) list(w http.ResponseWriter, r *http.Request) {
 	claims, _ := auth.FromContext(r.Context())
@@ -79,25 +86,26 @@ type itemResponse struct {
 }
 
 type orderResponse struct {
-	ID              string         `json:"id"`
-	Status          order.Status   `json:"status"`
-	RejectionReason *string        `json:"rejectionReason"`
-	Items           []itemResponse `json:"items"`
-	ItemCount       int            `json:"itemCount"`
-	Total           money          `json:"total"`
-	Currency        string         `json:"currency"`
-	CreatedAt       time.Time      `json:"createdAt"`
-	UpdatedAt       time.Time      `json:"updatedAt"`
+	ID              string             `json:"id"`
+	Status          order.Status       `json:"status"`
+	RejectionReason *string            `json:"rejectionReason"`
+	Items           []itemResponse     `json:"items"`
+	Shipments       []shipmentResponse `json:"shipments"`
+	ItemCount       int                `json:"itemCount"`
+	Total           money              `json:"total"`
+	Currency        string             `json:"currency"`
+	CreatedAt       time.Time          `json:"createdAt"`
+	UpdatedAt       time.Time          `json:"updatedAt"`
 }
 
 func toResponse(o *order.Order) orderResponse {
 	items := make([]itemResponse, len(o.Items))
 	for i, item := range o.Items {
-		items[i] = itemResponse{
-			ProductID: item.ProductID, SellerID: item.SellerID, ProductName: item.ProductName,
-			UnitPrice: money(item.UnitPrice.Cents), Currency: item.UnitPrice.Currency,
-			Quantity: item.Quantity, Subtotal: money(item.Subtotal().Cents),
-		}
+		items[i] = toItemResponse(item)
+	}
+	shipments := make([]shipmentResponse, len(o.Shipments))
+	for i, s := range o.Shipments {
+		shipments[i] = toShipmentResponse(s)
 	}
 	var reason *string
 	if o.RejectionReason != "" {
@@ -105,8 +113,16 @@ func toResponse(o *order.Order) orderResponse {
 	}
 	total := o.Total()
 	return orderResponse{
-		ID: o.ID, Status: o.Status, RejectionReason: reason, Items: items, ItemCount: o.ItemCount(),
+		ID: o.ID, Status: o.Status, RejectionReason: reason, Items: items, Shipments: shipments, ItemCount: o.ItemCount(),
 		Total: money(total.Cents), Currency: total.Currency, CreatedAt: o.CreatedAt.UTC(), UpdatedAt: o.UpdatedAt.UTC(),
+	}
+}
+
+func toItemResponse(item order.Item) itemResponse {
+	return itemResponse{
+		ProductID: item.ProductID, SellerID: item.SellerID, ProductName: item.ProductName,
+		UnitPrice: money(item.UnitPrice.Cents), Currency: item.UnitPrice.Currency,
+		Quantity: item.Quantity, Subtotal: money(item.Subtotal().Cents),
 	}
 }
 
@@ -115,6 +131,23 @@ func writeProblem(w http.ResponseWriter, status int, title, code string) {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]any{"status": status, "title": title, "code": code})
+}
+
+// problemFor traduz erros do domínio e do app para HTTP (usado nas rotas de envio).
+func problemFor(w http.ResponseWriter, r *http.Request, err error) {
+	var domainErr *order.DomainError
+	switch {
+	case errors.As(err, &domainErr):
+		writeProblem(w, http.StatusBadRequest, domainErr.Error(), "shipment.invalid_status")
+	case errors.Is(err, app.ErrNotFound):
+		writeProblem(w, http.StatusNotFound, "Shipment not found.", "shipment.not_found")
+	case errors.Is(err, order.ErrInvalidTransition):
+		writeProblem(w, http.StatusConflict, "This shipment cannot move to that status now.", "shipment.invalid_transition")
+	case errors.Is(err, app.ErrConflict):
+		writeProblem(w, http.StatusConflict, "The shipment was changed by another request. Reload and try again.", "shipment.conflict")
+	default:
+		serverError(w, r, err)
+	}
 }
 
 func serverError(w http.ResponseWriter, r *http.Request, err error) {

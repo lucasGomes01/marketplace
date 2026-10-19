@@ -2,7 +2,7 @@
 
 ```
              ┌──────────────┐
-  React ───▶ │ Gateway YARP │ :5000   (/api/users, /api/auth, /api/products, /api/cart, /api/orders)
+  React ───▶ │ Gateway YARP │ :5000   (/api/users, /api/auth, /api/products, /api/cart, /api/orders, /api/shipments)
   :5173      └──────┬───────┘
      ┌──────────────┼───────────────┬───────────────┐
      ▼              ▼               ▼               ▼
@@ -71,6 +71,11 @@ internal/messaging/       consumer/producer Kafka (franz-go)
 3. O Catalog consome `order.placed` → baixa o estoque (tudo ou nada, na mesma transação da `StockReservation`;
    `rowversion` em `Products` resolve a disputa pela última unidade) → publica `stock.reserved` ou `stock.rejected`.
 4. O Orders consome → `Confirmed` ou `Rejected`.
+
+## Envio (T-023/T-024)
+Cada pedido tem **um envio por vendedor** (`OrderShipments`). Pedido `Confirmed` → o vendedor avança o dele em
+`PUT /api/shipments/{orderId}/status` (`Picked → Packed → Shipped`); o comprador confirma o recebimento em
+`POST /api/orders/{id}/shipments/{sellerId}/delivery` (`Delivered`). Cada etapa publica `shipment.status-changed`.
 
 ## Observabilidade (T-022)
 - OpenTelemetry em todos os serviços (.NET: `BuildingBlocks.Observability`; Go: `internal/telemetry`), exportando OTLP

@@ -66,6 +66,9 @@ func TestSellerAdvancesStepByStepUntilShipped(t *testing.T) {
 	if !s.DeliveredAt.IsZero() {
 		t.Errorf("DeliveredAt = %v, want zero", s.DeliveredAt)
 	}
+	if !s.ReachedAt(ShipmentPacked).Equal(s.PackedAt) || !s.ReachedAt(ShipmentDelivered).IsZero() || !s.ReachedAt(ShipmentAwaitingPicking).IsZero() {
+		t.Errorf("ReachedAt does not match the timeline: %+v", s)
+	}
 	if other := shipmentOf(t, o, "s-bia"); other.Status != ShipmentAwaitingPicking {
 		t.Errorf("other seller's shipment = %s, want untouched", other.Status)
 	}
