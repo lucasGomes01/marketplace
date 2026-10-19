@@ -1,4 +1,4 @@
-# Backlog
+﻿# Backlog
 
 Status: `todo` · `doing` · `done` · `idea` (não priorizado). A IA pega a **primeira `todo`** com dependências `done`.
 Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar (etapa de planejamento).
@@ -64,6 +64,18 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | T-021 | Gateway: modo Produção (sem log por requisição) e cache de 5 s na vitrine | Gateway + Infra | T-020 | done |
 | T-022 | Observabilidade: OpenTelemetry (.NET e Go, trace atravessando o Kafka) + Grafana com comparação de testes de carga | Todos + Infra | T-021 | done |
 
+## Fase 7 — Envio (decidida em 2026-10-19)
+Depois de `Confirmed`, cada **vendedor** tem um **envio** com os itens dele:
+`AwaitingPicking → Picked (separado) → Packed (embalado) → Shipped (enviado) → Delivered (entregue)`.
+O vendedor avança até `Shipped`; o **comprador** confirma `Delivered` ("Recebi").
+
+| ID | Tarefa | Serviço | Depende | Status |
+|---|---|---|---|---|
+| T-023 | Domínio `Shipment` em Go: um envio por vendedor, máquina de status, quem pode avançar | Orders | T-012 | done |
+| T-024 | API (`/shipments` do vendedor, "Recebi" do comprador), persistência + backfill, evento `shipment.status-changed`, rota no gateway | Orders + Gateway + Infra | T-023 | doing |
+| T-025 | **Telas:** "Pedidos a despachar" (vendedor) e linha do tempo + "Recebi" em "meus pedidos" (comprador) | Web | T-024 | todo |
+| T-026 | E2E estendido: compra → separado → embalado → enviado → recebido | Infra | T-025 | todo |
+
 ## Ideias (pós-MVP)
 | ID | Ideia | Status |
 |---|---|---|
@@ -79,4 +91,6 @@ Tarefas sem arquivo próprio: criar a partir de `_template.md` antes de começar
 | I-10 | Investigar falha intermitente dos testes de integração com a suíte inteira em paralelo (vários SQL Server + Kafka). Visto 2× em 2026-10-13, não reproduzido em 6 rodadas seguidas. O CI agora guarda os resultados detalhados quando falha | idea |
 | I-12 | Cache da vitrine (`GET /products`) — o teste de estresse (T-020) mostrou o Catalog como primeiro gargalo | done (T-021, em memória no gateway) |
 | I-13 | Imagens de produto: MinIO no compose (API S3; em produção S3 privado + CloudFront com OAC), upload direto do browser via presigned URL gerada pelo Catalog, `ImageKey` no `Product` (só a referência, nunca o binário), chaves imutáveis (`products/{id}/{hash}.webp`) com `Cache-Control: public, max-age=31536000, immutable`, thumbnails para a listagem e exibição no web. Imagem **não** passa pelo Gateway | idea |
+| I-14 | Cancelamento do pedido/envio antes de `Shipped`, devolvendo o estoque no Catalog (evento) | idea |
+| I-15 | Código de rastreio da transportadora no envio `Shipped` | idea |
 | I-09 | Erros com **códigos** para o front traduzir sem regex. Já existem no `Result` (T-018) e saem em 401/404/409; falta expô-los no 400 de validação e usar no front | idea |
