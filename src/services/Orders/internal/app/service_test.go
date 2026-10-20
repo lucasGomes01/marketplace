@@ -13,16 +13,26 @@ import (
 
 var now = time.Date(2026, 10, 13, 12, 0, 0, 0, time.UTC)
 
-type memoryRepo struct{ orders map[string]*order.Order }
+type memoryRepo struct {
+	orders          map[string]*order.Order
+	shipmentWrites  int
+	conflictOnWrite bool
+}
 
 func newMemoryRepo() *memoryRepo { return &memoryRepo{orders: map[string]*order.Order{}} }
+
+// clone copia também os envios: o repositório não pode compartilhar o slice com quem chamou.
+func clone(o *order.Order) *order.Order {
+	copied := *o
+	copied.Shipments = append([]order.Shipment(nil), o.Shipments...)
+	return &copied
+}
 
 func (r *memoryRepo) Insert(_ context.Context, o *order.Order) error {
 	if _, exists := r.orders[o.ID]; exists {
 		return ErrDuplicate
 	}
-	copied := *o
-	r.orders[o.ID] = &copied
+	r.orders[o.ID] = clone(o)
 	return nil
 }
 
@@ -30,15 +40,40 @@ func (r *memoryRepo) UpdateStatus(_ context.Context, o *order.Order) error {
 	if _, ok := r.orders[o.ID]; !ok {
 		return ErrNotFound
 	}
-	copied := *o
-	r.orders[o.ID] = &copied
+	r.orders[o.ID] = clone(o)
 	return nil
+}
+
+func (r *memoryRepo) UpdateShipment(_ context.Context, o *order.Order, sellerID string, previous order.ShipmentStatus) error {
+	stored, ok := r.orders[o.ID]
+	if !ok {
+		return ErrNotFound
+	}
+	if current, _ := stored.Shipment(sellerID); r.conflictOnWrite || current.Status != previous {
+		return ErrConflict
+	}
+	r.shipmentWrites++
+	r.orders[o.ID] = clone(o)
+	return nil
+}
+
+func (r *memoryRepo) ListBySeller(_ context.Context, sellerID string, limit int) ([]*order.Order, error) {
+	var list []*order.Order
+	for _, o := range r.orders {
+		if _, ok := o.Shipment(sellerID); ok && o.Status == order.StatusConfirmed {
+			list = append(list, clone(o))
+		}
+	}
+	sort.Slice(list, func(i, j int) bool { return list[i].CreatedAt.After(list[j].CreatedAt) })
+	if len(list) > limit {
+		list = list[:limit]
+	}
+	return list, nil
 }
 
 func (r *memoryRepo) Get(_ context.Context, id string) (*order.Order, error) {
 	if o, ok := r.orders[id]; ok {
-		copied := *o
-		return &copied, nil
+		return clone(o), nil
 	}
 	return nil, ErrNotFound
 }

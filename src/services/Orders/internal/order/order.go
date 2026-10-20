@@ -61,6 +61,7 @@ type Order struct {
 	BuyerID         string
 	CartID          string
 	Items           []Item
+	Shipments       []Shipment
 	Status          Status
 	RejectionReason string
 	CreatedAt       time.Time
@@ -99,6 +100,7 @@ func New(id, buyerID, cartID string, items []Item, now time.Time) (*Order, error
 		BuyerID:   buyerID,
 		CartID:    cartID,
 		Items:     append([]Item(nil), items...),
+		Shipments: newShipments(items),
 		Status:    StatusPending,
 		CreatedAt: now,
 		UpdatedAt: now,

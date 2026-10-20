@@ -4,6 +4,9 @@ import { ApiError } from '../api/client'
 import { orderPolling, ordersApi, type Order } from '../api/orders'
 import { useAuth } from '../auth/context'
 import { OrderStatusBadge } from '../components/OrderStatusBadge'
+import { ShipmentStatusBadge } from '../components/ShipmentStatusBadge'
+import { ShipmentTimeline } from '../components/ShipmentTimeline'
+import { formatDateTime, shortOrderId as shortId } from '../utils/dates'
 import { formatPrice } from '../utils/money'
 
 /**
@@ -124,6 +127,72 @@ export function OrderPage() {
           </aside>
         </div>
       ) : null}
+
+      {order?.status === 'Confirmed' && order.shipments.length > 0 ? (
+        <Delivery
+          order={order}
+          token={token}
+          onChange={(updated) => setResult({ key, load: { status: 'ready', order: updated, polling: false } })}
+        />
+      ) : null}
+    </section>
+  )
+}
+
+/** Um bloco por vendedor: itens, linha do tempo e "Recebi" quando o envio já saiu. */
+function Delivery({ order, token, onChange }: { order: Order; token: string; onChange: (order: Order) => void }) {
+  const [confirming, setConfirming] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const total = order.shipments.length
+
+  async function confirm(sellerId: string) {
+    setConfirming(sellerId)
+    setError(null)
+    try {
+      onChange(await ordersApi.confirmDelivery(order.id, sellerId, token))
+    } catch {
+      setError('Não foi possível confirmar o recebimento. Tente novamente.')
+    } finally {
+      setConfirming(null)
+    }
+  }
+
+  return (
+    <section className="delivery" aria-labelledby="delivery-title">
+      <h2 id="delivery-title">Entrega</h2>
+      {error ? (
+        <div className="alert alert--error" role="alert">
+          {error}
+        </div>
+      ) : null}
+      <div className="delivery__list">
+        {order.shipments.map((shipment, index) => {
+          const title = `Envio ${index + 1} de ${total}`
+          const items = order.items.filter((item) => item.sellerId === shipment.sellerId)
+          return (
+            <article key={shipment.sellerId} className="shipment panel" aria-label={title}>
+              <header className="shipment__header">
+                <h3>{title}</h3>
+                <ShipmentStatusBadge status={shipment.status} />
+              </header>
+              <p className="muted shipment__items">
+                {items.map((item) => `${item.quantity} × ${item.productName}`).join(' · ')}
+              </p>
+              <ShipmentTimeline shipment={shipment} />
+              {shipment.status === 'Shipped' ? (
+                <button
+                  type="button"
+                  className="button button--primary"
+                  disabled={confirming !== null}
+                  onClick={() => void confirm(shipment.sellerId)}
+                >
+                  Recebi
+                </button>
+              ) : null}
+            </article>
+          )
+        })}
+      </div>
     </section>
   )
 }
@@ -157,8 +226,3 @@ function OrderMessage({ order, polling }: { order: Order | null; polling: boolea
     </div>
   )
 }
-
-const shortId = (id: string) => `#${id.slice(0, 8).toUpperCase()}`
-
-const formatDateTime = (iso: string) =>
-  new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })

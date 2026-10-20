@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { ordersApi, type Order } from '../api/orders'
+import { deliverySummary, ordersApi, type Order } from '../api/orders'
 import { useAuth } from '../auth/context'
 import { OrderStatusBadge } from '../components/OrderStatusBadge'
 import { formatPrice } from '../utils/money'
@@ -74,6 +74,7 @@ export function OrdersPage() {
                   <span>{new Date(order.createdAt).toLocaleDateString('pt-BR')}</span> ·{' '}
                   <span>{order.itemCount === 1 ? '1 item' : `${order.itemCount} itens`}</span>
                 </span>
+                {deliverySummary(order) ? <span className="muted">Entrega: {deliverySummary(order)}</span> : null}
               </span>
               <span className="order-row__side">
                 <strong>{formatPrice(order.total, order.currency)}</strong>

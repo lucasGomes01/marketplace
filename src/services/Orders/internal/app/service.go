@@ -19,6 +19,8 @@ var (
 	ErrNotFound = errors.New("app: order not found")
 	// ErrInvalidEvent: evento que nunca vai dar certo (dado inválido); o consumidor registra e pula.
 	ErrInvalidEvent = errors.New("app: invalid event")
+	// ErrConflict: outra requisição mudou o envio entre a leitura e a gravação.
+	ErrConflict = errors.New("app: concurrent change")
 )
 
 // Repository é a porta de persistência.
@@ -26,8 +28,12 @@ type Repository interface {
 	Insert(ctx context.Context, o *order.Order) error
 	// UpdateStatus grava status, motivo e UpdatedAt. Inexistente → ErrNotFound.
 	UpdateStatus(ctx context.Context, o *order.Order) error
+	// UpdateShipment grava o envio do vendedor só se ele ainda estiver em previous; senão → ErrConflict.
+	UpdateShipment(ctx context.Context, o *order.Order, sellerID string, previous order.ShipmentStatus) error
 	Get(ctx context.Context, id string) (*order.Order, error)
 	ListByBuyer(ctx context.Context, buyerID string, limit int) ([]*order.Order, error)
+	// ListBySeller devolve pedidos Confirmed com envio do vendedor, mais recentes primeiro.
+	ListBySeller(ctx context.Context, sellerID string, limit int) ([]*order.Order, error)
 }
 
 // Publisher é a porta de publicação de eventos (envelope igual ao dos serviços .NET).
@@ -41,6 +47,8 @@ const (
 	EventOrderPlaced    = "order.placed"
 	EventStockReserved  = "stock.reserved"
 	EventStockRejected  = "stock.rejected"
+
+	EventShipmentStatusChanged = "shipment.status-changed"
 )
 
 // CartCheckedOut é o "data" do evento publicado pelo Cart. Preços chegam como número decimal JSON.
@@ -83,6 +91,15 @@ type StockRejected struct {
 	OrderID    string   `json:"orderId"`
 	Reason     string   `json:"reason"`
 	ProductIDs []string `json:"productIds"`
+}
+
+// ShipmentStatusChanged é publicado a cada etapa do envio. ChangedAt é quando a etapa aconteceu (igual na republicação).
+type ShipmentStatusChanged struct {
+	OrderID   string               `json:"orderId"`
+	BuyerID   string               `json:"buyerId"`
+	SellerID  string               `json:"sellerId"`
+	Status    order.ShipmentStatus `json:"status"`
+	ChangedAt time.Time            `json:"changedAt"`
 }
 
 // MaxOrdersListed limita "meus pedidos" (paginação fica para depois).

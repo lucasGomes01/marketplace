@@ -2,6 +2,13 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-19 — Fase 7: Envio (T-023 a T-026)
+- Pedido confirmado ganha **um envio por vendedor**: `AwaitingPicking → Picked → Packed → Shipped → Delivered`. Vendedor avança até `Shipped` (`PUT /api/shipments/{orderId}/status`), comprador confirma "Recebi" (`Delivered`).
+- `OrderShipments` no SQL Server com backfill idempotente dos pedidos antigos; gravação condicional (409 em requisições simultâneas). Evento `shipment.status-changed` (ainda sem consumidor).
+- Telas: "Despachar" (`/vender/envios`) para vendedores; seção "Entrega" com linha do tempo no pedido; andamento em "Meus pedidos". E2E vai até "Entregue".
+- Alerta local: Testcontainers no Windows precisa de `TESTCONTAINERS_RYUK_DISABLED=true`. Kafka UI (8080) conflita com outro container da máquina.
+- Ideias novas: I-14 (cancelamento devolvendo estoque), I-15 (código de rastreio).
+
 ## 2026-10-16 — T-022 Observabilidade
 - OpenTelemetry em .NET e Go, trace atravessando o Kafka (um checkout = um trace do gateway até a confirmação). Grafana em :3000 com histórico.
 - Métricas de negócio (pedidos por status, tempo até resolver, reservas) e k6 no Prometheus com etiqueta de versão → painel compara experimentos de escala.

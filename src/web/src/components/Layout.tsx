@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
+import { isSeller } from '../api/users'
 import { useAuth } from '../auth/context'
 import { useCart } from '../cart/context'
 
@@ -27,6 +28,11 @@ export function Layout() {
                 <NavLink to="/vender/novo" className="site-nav__link">
                   Vender
                 </NavLink>
+                {isSeller(state.user) ? (
+                  <NavLink to="/vender/envios" className="site-nav__link">
+                    Despachar
+                  </NavLink>
+                ) : null}
                 <NavLink to="/pedidos" className="site-nav__link">
                   Pedidos
                 </NavLink>

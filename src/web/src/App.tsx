@@ -13,6 +13,7 @@ import { OrderPage } from './pages/OrderPage'
 import { OrdersPage } from './pages/OrdersPage'
 import { ProductPage } from './pages/ProductPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { ShipmentsPage } from './pages/ShipmentsPage'
 
 /** Rotas da aplicação (separadas do Router para os testes usarem MemoryRouter). */
 export function AppRoutes() {
@@ -29,6 +30,7 @@ export function AppRoutes() {
           <Route path="pedidos" element={<OrdersPage />} />
           <Route path="pedidos/:id" element={<OrderPage />} />
           <Route path="vender/novo" element={<NewProductPage />} />
+          <Route path="vender/envios" element={<ShipmentsPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>

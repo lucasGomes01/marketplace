@@ -127,6 +127,75 @@ func TestStoreWithRealSQLServer(t *testing.T) {
 		}
 	})
 
+	t.Run("shipments are stored with the order and read in seller order", func(t *testing.T) {
+		got, _ := s.Get(ctx, "order-1")
+		if len(got.Shipments) != 2 || got.Shipments[0].SellerID != "s-ana" || got.Shipments[1].SellerID != "s-bia" {
+			t.Fatalf("shipments = %+v", got.Shipments)
+		}
+		if got.Shipments[0].Status != order.ShipmentAwaitingPicking || !got.Shipments[0].PickedAt.IsZero() {
+			t.Errorf("new shipment = %+v", got.Shipments[0])
+		}
+	})
+
+	t.Run("updates a shipment only if it is still in the expected status", func(t *testing.T) {
+		o := newOrder(t, "order-ship", "buyer-4", base)
+		if err := s.Insert(ctx, o); err != nil {
+			t.Fatal(err)
+		}
+		_ = o.Confirm(base)
+		_ = s.UpdateStatus(ctx, o)
+		picked := base.Add(time.Hour)
+		_ = o.AdvanceShipment("s-ana", order.ShipmentPicked, picked)
+
+		if err := s.UpdateShipment(ctx, o, "s-ana", order.ShipmentAwaitingPicking); err != nil {
+			t.Fatalf("update: %v", err)
+		}
+		// Segunda gravação esperando o status antigo: alguém já mudou → conflito.
+		if err := s.UpdateShipment(ctx, o, "s-ana", order.ShipmentAwaitingPicking); !errors.Is(err, app.ErrConflict) {
+			t.Errorf("stale update: err = %v, want ErrConflict", err)
+		}
+
+		got, _ := s.Get(ctx, "order-ship")
+		ana, _ := got.Shipment("s-ana")
+		if ana.Status != order.ShipmentPicked || !ana.PickedAt.Equal(picked) || !ana.PackedAt.IsZero() {
+			t.Errorf("s-ana = %+v", ana)
+		}
+		if bia, _ := got.Shipment("s-bia"); bia.Status != order.ShipmentAwaitingPicking {
+			t.Errorf("s-bia = %+v", bia)
+		}
+		if !got.UpdatedAt.Equal(picked) {
+			t.Errorf("UpdatedAt = %v, want %v", got.UpdatedAt, picked)
+		}
+	})
+
+	t.Run("lists a seller's confirmed orders newest first", func(t *testing.T) {
+		// order-ship (confirmado) tem s-ana; order-1 (pendente) não aparece.
+		list, err := s.ListBySeller(ctx, "s-ana", 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(list) != 1 || list[0].ID != "order-ship" || len(list[0].Items) != 2 || len(list[0].Shipments) != 2 {
+			t.Errorf("list = %v", ids(list))
+		}
+		if none, _ := s.ListBySeller(ctx, "s-carla", 10); len(none) != 0 {
+			t.Errorf("s-carla = %v", ids(none))
+		}
+	})
+
+	t.Run("orders stored before shipments existed get them when the store opens", func(t *testing.T) {
+		db := s.db
+		if _, err := db.ExecContext(ctx, `DELETE FROM dbo.OrderShipments WHERE OrderId = 'order-1'`); err != nil {
+			t.Fatal(err)
+		}
+
+		openStore(t, dsn) // o startup faz o backfill
+
+		got, _ := s.Get(ctx, "order-1")
+		if len(got.Shipments) != 2 || got.Shipments[0].SellerID != "s-ana" || got.Shipments[1].Status != order.ShipmentAwaitingPicking {
+			t.Errorf("shipments after backfill = %+v", got.Shipments)
+		}
+	})
+
 	t.Run("lists a buyer's orders newest first with a limit", func(t *testing.T) {
 		for i, id := range []string{"b2-old", "b2-new", "b2-mid"} {
 			created := base.Add(time.Duration([]int{1, 3, 2}[i]) * time.Hour)

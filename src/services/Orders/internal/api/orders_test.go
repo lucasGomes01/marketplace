@@ -21,7 +21,55 @@ var (
 	authCfg = auth.Config{Issuer: "marketplace-users", Audience: "marketplace", SigningKey: []byte("test-signing-key-with-at-least-32-chars!")}
 )
 
-type fakeQueries struct{ orders []*order.Order }
+// fakeQueries aplica as regras do domínio direto nos pedidos em memória; failWith simula erro do app (ex.: conflito).
+type fakeQueries struct {
+	orders   []*order.Order
+	failWith error
+}
+
+func (f fakeQueries) find(id string) (*order.Order, error) {
+	for _, o := range f.orders {
+		if o.ID == id {
+			return o, nil
+		}
+	}
+	return nil, app.ErrNotFound
+}
+
+func (f fakeQueries) ShipmentsOf(_ context.Context, sellerID string) ([]*order.Order, error) {
+	var list []*order.Order
+	for _, o := range f.orders {
+		if _, ok := o.Shipment(sellerID); ok && o.Status == order.StatusConfirmed {
+			list = append(list, o)
+		}
+	}
+	return list, nil
+}
+
+func (f fakeQueries) AdvanceShipment(_ context.Context, sellerID, orderID string, to order.ShipmentStatus) (*order.Order, error) {
+	if f.failWith != nil {
+		return nil, f.failWith
+	}
+	o, err := f.find(orderID)
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := o.Shipment(sellerID); !ok {
+		return nil, app.ErrNotFound
+	}
+	return o, o.AdvanceShipment(sellerID, to, now)
+}
+
+func (f fakeQueries) ConfirmDelivery(ctx context.Context, buyerID, orderID, sellerID string) (*order.Order, error) {
+	o, err := f.OrderOf(ctx, buyerID, orderID)
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := o.Shipment(sellerID); !ok {
+		return nil, app.ErrNotFound
+	}
+	return o, o.ConfirmDelivery(sellerID, now)
+}
 
 func (f fakeQueries) OrdersOf(_ context.Context, buyerID string) ([]*order.Order, error) {
 	var mine []*order.Order
@@ -42,11 +90,14 @@ func (f fakeQueries) OrderOf(_ context.Context, buyerID, id string) (*order.Orde
 	return nil, app.ErrNotFound
 }
 
-func token(t *testing.T, userID string) string {
+func token(t *testing.T, userID string, roles ...string) string {
 	t.Helper()
+	if len(roles) == 0 {
+		roles = []string{"Buyer"}
+	}
 	enc := func(v any) string { b, _ := json.Marshal(v); return base64.RawURLEncoding.EncodeToString(b) }
 	unsigned := enc(map[string]any{"alg": "HS256", "typ": "JWT"}) + "." + enc(map[string]any{
-		"iss": authCfg.Issuer, "aud": authCfg.Audience, "sub": userID, "role": []string{"Buyer"}, "exp": now.Add(time.Hour).Unix(),
+		"iss": authCfg.Issuer, "aud": authCfg.Audience, "sub": userID, "role": roles, "exp": now.Add(time.Hour).Unix(),
 	})
 	mac := hmac.New(sha256.New, authCfg.SigningKey)
 	mac.Write([]byte(unsigned))
