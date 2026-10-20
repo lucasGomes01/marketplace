@@ -23,13 +23,14 @@ export function ProductCard({ product, compact = false, preview = false }: Produ
 
   const content = (
     <>
-      <div className="product-card__media">
-        <ProductImage src={product.imageUrls?.[0]} name={product.name || '?'} className="product-card__thumb" />
-        {discount ? <span className="product-card__flag product-card__flag--discount">-{discount}%</span> : null}
-        {condition ? <span className="product-card__flag product-card__flag--condition">{condition}</span> : null}
-      </div>
+      <ProductImage src={product.imageUrls?.[0]} className="product-card__thumb" />
       <div className="product-card__body">
-        {product.brand ? <p className="product-card__brand">{product.brand}</p> : null}
+        {product.brand || condition ? (
+          <p className="product-card__meta">
+            {product.brand ? <span>{product.brand}</span> : null}
+            {condition ? <span>{condition}</span> : null}
+          </p>
+        ) : null}
         <h3 className="product-card__name">{product.name}</h3>
         {discount && product.originalPrice ? (
           <p className="product-card__original">
@@ -37,7 +38,10 @@ export function ProductCard({ product, compact = false, preview = false }: Produ
             <s>{formatPrice(product.originalPrice, product.currency)}</s>
           </p>
         ) : null}
-        <p className="product-card__price">{formatPrice(product.price, product.currency)}</p>
+        <p className="product-card__price">
+          {formatPrice(product.price, product.currency)}
+          {discount ? <span className="product-card__discount">{discount}% OFF</span> : null}
+        </p>
         {!compact && product.freeShipping ? <p className="product-card__shipping">Frete grátis</p> : null}
         {!compact ? (
           <p className={`product-card__stock${product.stock <= 3 ? ' product-card__stock--low' : ''}`}>{stockLabel(product.stock)}</p>

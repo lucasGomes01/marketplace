@@ -457,9 +457,6 @@ function FormSection({ number, title, description, children }: { number: number;
   return (
     <section className="form-section" aria-labelledby={id}>
       <div className="form-section__header">
-        <span className="form-section__number" aria-hidden="true">
-          {number}
-        </span>
         <div>
           <h2 id={id}>{title}</h2>
           {description ? <p className="muted">{description}</p> : null}

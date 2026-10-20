@@ -41,3 +41,7 @@ ordenação, página de produto completa e um formulário de anúncio com os dad
 - Fotos e ficha técnica ficam em JSON na própria tabela `Products` (listas pequenas, sempre lidas com o produto).
 - Categorias: códigos estáveis no Catalog (`ProductCategories`), nomes em português só no front (`catalog/categories.ts`).
 - O rodapé usa `div` em vez de `ul/li` para não somar `listitem` nas telas de pedidos/envios (testes e E2E usam esse papel).
+- Revisão visual (pedido do humano: "não ficar com cara de tela feita com IA"): saiu o banner em degradê com ícones
+  flutuantes, os quadrados com a inicial da categoria, os selos em pílula e os círculos numerados. Entrou paleta
+  neutra com um único azul, cantos de 4–6 px, cabeçalho escuro com busca branca, departamentos em lista de texto,
+  desconto como texto ao lado do preço ("20% OFF") e "Sem foto" neutro no lugar da letra gigante.

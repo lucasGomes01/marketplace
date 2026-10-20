@@ -84,9 +84,9 @@ export function ProductPage() {
 
         <div className="product-detail__info">
           <div className="product-detail__tags">
-            <span className="chip">{conditionLabel(product.condition)}</span>
-            {product.brand ? <span className="chip chip--muted">{product.brand}</span> : null}
-            {product.sku ? <span className="product-detail__sku muted">Cód. {product.sku}</span> : null}
+            <span>{conditionLabel(product.condition)}</span>
+            {product.brand ? <span>{product.brand}</span> : null}
+            {product.sku ? <span>Cód. {product.sku}</span> : null}
           </div>
           <h1>{product.name}</h1>
 
@@ -175,7 +175,7 @@ function Gallery({ product }: { product: Product }) {
 
   return (
     <div className="gallery">
-      <ProductImage src={images[selected]} name={product.name} alt={product.name} className="gallery__main" />
+      <ProductImage src={images[selected]} alt={product.name} className="gallery__main" />
       {images.length > 1 ? (
         <ul className="gallery__thumbs" aria-label="Fotos do produto">
           {images.map((url, index) => (
@@ -187,7 +187,7 @@ function Gallery({ product }: { product: Product }) {
                 aria-pressed={index === selected}
                 onClick={() => setSelected(index)}
               >
-                <ProductImage src={url} name={product.name} />
+                <ProductImage src={url} />
               </button>
             </li>
           ))}

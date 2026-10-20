@@ -8,7 +8,9 @@ import { SearchBar } from './SearchBar'
 
 /** Categorias com atalho na barra abaixo do cabeçalho (as demais ficam nos filtros da vitrine). */
 const NAV_CATEGORIES = CATEGORIES.filter((c) =>
-  ['eletronicos', 'celulares', 'informatica', 'casa', 'eletrodomesticos', 'ferramentas', 'moda', 'esportes'].includes(c.code),
+  ['eletronicos', 'celulares', 'informatica', 'casa', 'eletrodomesticos', 'ferramentas', 'moda', 'esportes'].includes(
+    c.code,
+  ),
 )
 
 const CURRENT_YEAR = new Date().getFullYear()
@@ -30,67 +32,59 @@ export function Layout() {
       <a href="#conteudo" className="skip-link">
         Pular para o conteúdo
       </a>
-      <div className="topbar">
-        <div className="container topbar__inner">
-          <span>
-            <Icon name="truck" size={16} /> Procure o selo "Frete grátis" nos anúncios
-          </span>
-          <span className="topbar__extra">
-            <Icon name="shield" size={16} /> Estoque confirmado antes do pedido
-          </span>
-        </div>
-      </div>
-
       <header className="site-header">
-        <div className="container site-header__inner">
-          <Link to="/" className="brand">
-            <span className="brand__mark" aria-hidden="true">
-              ◆
-            </span>
-            <span className="brand__name">Marketplace</span>
-          </Link>
+        <div className="site-header__bar">
+          <div className="container site-header__inner">
+            <Link to="/" className="brand">
+              <span className="brand__name">Marketplace</span>
+              <span className="brand__dot" aria-hidden="true">
+                .
+              </span>
+            </Link>
 
-          <SearchBar />
+            <SearchBar />
 
-          <nav className="site-nav" aria-label="Conta">
-            {state.status === 'authenticated' ? (
-              <>
-                <NavLink to="/vender/novo" className="site-nav__link">
-                  Vender
-                </NavLink>
-                {isSeller(state.user) ? (
-                  <NavLink to="/vender/envios" className="site-nav__link">
-                    Despachar
+            <nav className="site-nav" aria-label="Conta">
+              {state.status === 'authenticated' ? (
+                <>
+                  <NavLink to="/vender/novo" className="site-nav__link">
+                    Vender
                   </NavLink>
-                ) : null}
-                <NavLink to="/pedidos" className="site-nav__link">
-                  Pedidos
-                </NavLink>
-                <NavLink to="/minha-conta" className="site-nav__user" title={state.user.name}>
-                  <Icon name="user" size={18} />
-                  <span className="site-nav__user-name">{state.user.name}</span>
-                </NavLink>
-                <button type="button" className="button button--ghost button--small" onClick={handleLogout}>
-                  Sair
-                </button>
-                <NavLink to="/carrinho" className="site-nav__cart" aria-label={`Carrinho (${count})`}>
-                  <Icon name="cart" size={22} />
-                  <span className="site-nav__cart-count" aria-hidden="true">
-                    {count}
-                  </span>
-                </NavLink>
-              </>
-            ) : state.status === 'anonymous' ? (
-              <>
-                <NavLink to="/entrar" className="button button--ghost button--small">
-                  Entrar
-                </NavLink>
-                <NavLink to="/cadastro" className="button button--primary button--small">
-                  Criar conta
-                </NavLink>
-              </>
-            ) : null}
-          </nav>
+                  {isSeller(state.user) ? (
+                    <NavLink to="/vender/envios" className="site-nav__link">
+                      Despachar
+                    </NavLink>
+                  ) : null}
+                  <NavLink to="/pedidos" className="site-nav__link">
+                    Pedidos
+                  </NavLink>
+                  <NavLink to="/minha-conta" className="site-nav__user" title={state.user.name}>
+                    <Icon name="user" size={18} />
+                    <span className="site-nav__user-name">{state.user.name}</span>
+                  </NavLink>
+                  <button type="button" className="button button--ghost button--small" onClick={handleLogout}>
+                    Sair
+                  </button>
+                  <NavLink to="/carrinho" className="site-nav__cart" aria-label={`Carrinho (${count})`}>
+                    <Icon name="cart" size={22} />
+                    <span className="site-nav__cart-label">Carrinho</span>
+                    <span className="site-nav__cart-count" aria-hidden="true">
+                      {count}
+                    </span>
+                  </NavLink>
+                </>
+              ) : state.status === 'anonymous' ? (
+                <>
+                  <NavLink to="/entrar" className="button button--ghost button--small">
+                    Entrar
+                  </NavLink>
+                  <NavLink to="/cadastro" className="button button--primary button--small">
+                    Criar conta
+                  </NavLink>
+                </>
+              ) : null}
+            </nav>
+          </div>
         </div>
 
         <nav className="category-bar" aria-label="Categorias">
@@ -128,39 +122,18 @@ function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="container">
-        <div className="site-footer__benefits">
-          <div>
-            <Icon name="store" />
-            <p>
-              <strong>Vários vendedores</strong>
-              <span>Um carrinho só para comprar de todos</span>
-            </p>
-          </div>
-          <div>
-            <Icon name="shield" />
-            <p>
-              <strong>Estoque garantido</strong>
-              <span>O pedido só confirma com o produto reservado</span>
-            </p>
-          </div>
-          <div>
-            <Icon name="truck" />
-            <p>
-              <strong>Entrega acompanhada</strong>
-              <span>Separado, embalado, enviado e recebido</span>
-            </p>
-          </div>
-        </div>
-
         <div className="site-footer__columns">
           <div className="site-footer__about">
             <Link to="/" className="brand">
-              <span className="brand__mark" aria-hidden="true">
-                ◆
-              </span>
               <span>Marketplace</span>
+              <span className="brand__dot" aria-hidden="true">
+                .
+              </span>
             </Link>
-            <p className="muted">Compre e venda direto de quem faz. Produtos novos, usados e recondicionados de vendedores de todo o Brasil.</p>
+            <p className="muted">
+              Compre e venda direto de quem faz. Produtos novos, usados e recondicionados de vendedores de todo o
+              Brasil.
+            </p>
           </div>
           <nav aria-label="Comprar">
             <h2>Comprar</h2>

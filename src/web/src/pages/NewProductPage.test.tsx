@@ -107,7 +107,7 @@ describe('NewProductPage', () => {
 
     const preview = screen.getByRole('complementary', { name: 'Pré-visualização' })
     expect(within(preview).getByRole('heading', { name: 'Parafusadeira 12V' })).toBeInTheDocument()
-    expect(within(preview).getByText('-50%')).toBeInTheDocument()
+    expect(within(preview).getByText('50% OFF')).toBeInTheDocument()
   })
 
   it('checks the original price and photo addresses before calling the API', async () => {

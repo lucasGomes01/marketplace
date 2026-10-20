@@ -86,50 +86,44 @@ export function HomePage() {
     <>
       {landing ? (
         <>
-          <section className="hero-banner">
-            <div className="hero-banner__content">
-              <p className="hero-banner__eyebrow">
-                {state.status === 'authenticated' ? `Olá, ${state.user.name.split(' ')[0]}! Veja o que chegou.` : 'Vários vendedores, um carrinho só.'}
+          <div className="home-top">
+            <section className="welcome">
+              <p className="welcome__greeting">
+                {state.status === 'authenticated' ? `Olá, ${state.user.name.split(' ')[0]}.` : 'Vários vendedores, um carrinho só.'}
               </p>
               <h1>Compre e venda direto de quem faz.</h1>
-              <p className="hero-banner__lead">
-                Produtos novos, usados e recondicionados com estoque confirmado e entrega acompanhada passo a passo.
+              <p className="welcome__lead">
+                Produtos novos, usados e recondicionados de vendedores independentes. O estoque é reservado quando o
+                pedido confirma e cada envio pode ser acompanhado até a entrega.
               </p>
-              <div className="hero-banner__actions">
-                <a href="#catalogo" className="button button--light">
-                  Ver produtos
-                </a>
-                <Link to="/vender/novo" className="button button--outline-light">
-                  Começar a anunciar
-                </Link>
-              </div>
-            </div>
-            <div className="hero-banner__art" aria-hidden="true">
-              <span className="hero-banner__bubble hero-banner__bubble--a">
-                <Icon name="tag" size={28} />
-              </span>
-              <span className="hero-banner__bubble hero-banner__bubble--b">
-                <Icon name="truck" size={28} />
-              </span>
-              <span className="hero-banner__bubble hero-banner__bubble--c">
-                <Icon name="cart" size={28} />
-              </span>
-            </div>
-          </section>
+              <a href="#catalogo" className="button button--primary">
+                Ver produtos
+              </a>
+            </section>
 
-          <section className="category-tiles" aria-labelledby="categories-title">
-            <h2 id="categories-title" className="section-title">
-              Navegue por categoria
+            <aside className="sell-box" aria-labelledby="sell-title">
+              <h2 id="sell-title">Venda no Marketplace</h2>
+              <ul>
+                <li>Anúncio com fotos, ficha técnica e preço promocional</li>
+                <li>Pedidos a despachar organizados por etapa</li>
+                <li>Mesma conta para comprar e vender</li>
+              </ul>
+              <Link to="/vender/novo" className="button">
+                Começar a anunciar
+              </Link>
+            </aside>
+          </div>
+
+          <section className="departments" aria-labelledby="departments-title">
+            <h2 id="departments-title" className="section-title">
+              Departamentos
             </h2>
-            <ul className="category-tiles__list">
-              {CATEGORIES.slice(0, 12).map((category) => (
+            <ul className="departments__list">
+              {CATEGORIES.map((category) => (
                 <li key={category.code}>
-                  <Link to={`/?categoria=${category.code}`} className={`category-tile category-tile--${category.code}`}>
-                    <span className="category-tile__initial" aria-hidden="true">
-                      {category.label.charAt(0)}
-                    </span>
-                    <span className="category-tile__label">{category.label}</span>
-                    <span className="category-tile__blurb">{category.blurb}</span>
+                  <Link to={`/?categoria=${category.code}`}>
+                    <span className="departments__name">{category.label}</span>
+                    <span className="departments__blurb">{category.blurb}</span>
                   </Link>
                 </li>
               ))}

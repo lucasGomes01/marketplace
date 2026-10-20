@@ -48,7 +48,7 @@ describe('HomePage (vitrine)', () => {
     await screen.findByRole('heading', { name: 'Furadeira de impacto 700W' })
     const furadeira = cards()[2]
     expect(within(furadeira).getByText('Bosch')).toBeInTheDocument()
-    expect(within(furadeira).getByText('-20%')).toBeInTheDocument()
+    expect(within(furadeira).getByText('20% OFF')).toBeInTheDocument()
     expect(within(furadeira).getByText('Frete grátis')).toBeInTheDocument()
     expect(within(cards()[1]).getByText('Usado')).toBeInTheDocument()
   })

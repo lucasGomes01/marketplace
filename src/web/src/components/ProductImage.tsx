@@ -1,17 +1,19 @@
 import { useState } from 'react'
+import { Icon } from './Icon'
 
 /**
- * Foto do produto ou, sem foto (ou se o endereço falhar), a inicial do nome sobre um fundo de cor.
+ * Foto do produto ou, sem foto (ou se o endereço falhar), um espaço neutro com "Sem foto".
  * O alt fica vazio quando o nome já aparece ao lado (cartão, carrinho).
  */
-export function ProductImage({ src, name, alt = '', className }: { src?: string; name: string; alt?: string; className?: string }) {
+export function ProductImage({ src, alt = '', className }: { src?: string; alt?: string; className?: string }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null)
   const classes = `product-image${className ? ` ${className}` : ''}`
 
   if (!src || failedSrc === src) {
     return (
       <div className={`${classes} product-image--placeholder`} aria-hidden="true">
-        {name.charAt(0).toUpperCase()}
+        <Icon name="image" size={28} />
+        <span>Sem foto</span>
       </div>
     )
   }
