@@ -2,6 +2,16 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-20 — T-027 Outbox (ADR-005)
+- Cart, Catalog e Orders gravam o evento em `OutboxMessages` **na mesma transação** do dado; um relay por serviço
+  (lock `sp_getapplock`, conexão fora do pool) publica em lote e em ordem. `BuildingBlocks.Outbox` (.NET) e
+  `internal/outbox` (Go). O checkout funciona com o Kafka fora; o "repita a requisição para republicar" acabou.
+- Trace contínuo através do relay (traceparent gravado na linha). Painel "Outbox" (pendentes e idade).
+- Carga `compra`: checkout ~2× mais rápido na mediana. O relay de um ack por vez fazia fila no Cart (31 eventos);
+  em lote, ≤ 4. A cauda restante do "até confirmar" varia entre execuções e não vem do outbox.
+- Alerta: migration gerada com mudança não commitada de outra tarefa na mesma pasta (refeita); regra em `conventions.md`.
+  A T-028 (vitrine, outra sessão/worktree) vai precisar refazer a migration do Catalog depois do merge desta.
+
 ## 2026-10-19 — Fase 7: Envio (T-023 a T-026)
 - Pedido confirmado ganha **um envio por vendedor**: `AwaitingPicking → Picked → Packed → Shipped → Delivered`. Vendedor avança até `Shipped` (`PUT /api/shipments/{orderId}/status`), comprador confirma "Recebi" (`Delivered`).
 - `OrderShipments` no SQL Server com backfill idempotente dos pedidos antigos; gravação condicional (409 em requisições simultâneas). Evento `shipment.status-changed` (ainda sem consumidor).

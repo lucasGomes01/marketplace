@@ -23,7 +23,7 @@ internal sealed class StockStore(CatalogDbContext db) : IStockStore
         db.StockReservations.Add(reservation);
         try
         {
-            // Uma SaveChanges = uma transação: baixa de estoque + reserva juntas.
+            // Uma SaveChanges = uma transação: baixa de estoque + reserva + evento no outbox juntos.
             await db.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
@@ -33,7 +33,7 @@ internal sealed class StockStore(CatalogDbContext db) : IStockStore
         }
         catch (DbUpdateException ex) when (ex.InnerException is SqlException sql && UniqueViolationErrors.Contains(sql.Number))
         {
-            // O mesmo pedido foi reservado em paralelo; na nova tentativa a reserva existente é republicada.
+            // O mesmo pedido foi reservado em paralelo; na nova tentativa a reserva já existe e nada é feito.
             throw new StockConcurrencyException();
         }
     }

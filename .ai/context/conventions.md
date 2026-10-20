@@ -39,6 +39,17 @@
 6. Rode os testes de arquitetura: eles falham se uma camada interna referenciar uma externa.
 
 - Migrations: `dotnet tool run dotnet-ef migrations add <Nome> -p src/services/X/X.Infrastructure -s src/services/X/X.Api -o Persistence/Migrations`.
+  Rode com a árvore limpa: a migration captura **todo** o modelo atual, inclusive mudanças de outras tarefas não commitadas.
+
+### Publicar um evento novo (outbox, ADR-005)
+1. Contrato em `events.md` e tópico no `kafka-init` do compose.
+2. **.NET:** no handler, chame `IEventPublisher.PublishAsync(...)` **antes** de salvar, no mesmo escopo do repositório:
+   o evento é gravado no mesmo `SaveChanges`. Serviço novo que publica: `modelBuilder.AddOutbox()` no DbContext,
+   `services.AddOutbox<TContext>(configuration)` na Infrastructure e uma migration.
+   Teste do handler: o evento precisa estar registrado quando o fake do repositório grava (ver `BeforeSave` nos testes).
+3. **Go (Orders):** o caso de uso entrega um `app.Event` ao `Repository`, que grava dado e evento na mesma `tx`
+   (`insertEvent` no store). Nunca publique direto no Kafka a partir de um caso de uso.
+4. Mesma operação repetida (reentrega, nova tentativa) não registra o evento de novo: um `eventId` vai uma vez ao outbox.
 
 ## C# / .NET
 - .NET 10, Nullable habilitado, `record` para DTOs e eventos.

@@ -1,4 +1,5 @@
-// Orders: consome cart.checked-out, grava o pedido no SQL Server, publica order.placed e expõe /orders.
+// Orders: consome cart.checked-out, grava o pedido no SQL Server com o order.placed no outbox, publica pelo relay e
+// expõe /orders e /shipments.
 package main
 
 import (
@@ -21,6 +22,7 @@ import (
 	"marketplace/orders/internal/auth"
 	"marketplace/orders/internal/messaging"
 	"marketplace/orders/internal/order"
+	"marketplace/orders/internal/outbox"
 	"marketplace/orders/internal/store"
 	"marketplace/orders/internal/telemetry"
 )
@@ -103,10 +105,20 @@ func run(logger *slog.Logger) error {
 	if err != nil {
 		return fmt.Errorf("kafka producer: %w", err)
 	}
-	publisher := messaging.NewPublisher(producer, time.Now)
+	publisher := messaging.NewPublisher(producer)
 	defer publisher.Close()
 
-	service := app.NewService(orders, publisher, time.Now)
+	// Outbox (ADR-005): os eventos são gravados com o pedido; o relay publica. O commit acorda o relay na hora.
+	wake := outbox.NewSignal()
+	orders.WakeOnEvent(wake.Notify)
+	relay := &outbox.Relay{
+		Store: orders, Transport: publisher, Lock: orders.Lock(), Signal: wake, Clock: time.Now,
+		Log: logger, Observe: outbox.Gauges(time.Now),
+	}
+	relayDone := make(chan struct{})
+	go func() { defer close(relayDone); relay.Run(ctx) }()
+
+	service := app.NewService(orders, time.Now)
 
 	topics := []string{app.EventCartCheckedOut, app.EventStockReserved, app.EventStockRejected}
 	consumer, err := messaging.NewConsumer(cfg.brokers, consumerGroup, topics, eventHandler(service), logger)
@@ -131,6 +143,7 @@ func run(logger *slog.Logger) error {
 	defer cancel()
 	_ = server.Shutdown(shutdown)
 	<-consumerDone
+	<-relayDone
 	return nil
 }
 

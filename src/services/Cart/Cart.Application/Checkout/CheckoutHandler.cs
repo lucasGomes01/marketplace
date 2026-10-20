@@ -41,7 +41,10 @@ public static class CheckoutIds
     }
 }
 
-/// <summary>Publica o snapshot do carrinho e depois o esvazia (os itens passam a viver no pedido).</summary>
+/// <summary>
+/// Registra o snapshot do carrinho como evento e esvazia o carrinho (os itens passam a viver no pedido). Evento e
+/// carrinho vazio são gravados na mesma transação (outbox, ADR-005): o checkout não depende do Kafka estar no ar.
+/// </summary>
 public sealed class CheckoutHandler(ICartRepository carts, IEventPublisher events, TimeProvider clock)
     : IHandler<CheckoutCommand, CheckoutResponse>
 {
@@ -58,15 +61,8 @@ public sealed class CheckoutHandler(ICartRepository carts, IEventPublisher event
             .Select(i => new CartCheckedOutItem(i.ProductId, i.SellerId, i.ProductName, i.UnitPrice.Amount, i.UnitPrice.Currency, i.Quantity))
             .ToList());
 
-        // Publica primeiro: se o broker estiver fora, nada muda e a pessoa pode tentar de novo.
-        try
-        {
-            await events.PublishAsync(CartCheckedOut.EventType, cart.Id.ToString(), checkoutId, checkedOut, cancellationToken);
-        }
-        catch (EventPublishingException)
-        {
-            return Error.Unavailable("events.unavailable", "Could not place the order right now. Try again in a moment.");
-        }
+        // Registrar antes de salvar: o evento vai junto no SaveChanges do repositório.
+        await events.PublishAsync(CartCheckedOut.EventType, cart.Id.ToString(), checkoutId, checkedOut, cancellationToken);
 
         cart.Clear(clock);
         var saved = await CartErrors.SaveAsync(carts, cart, cancellationToken);

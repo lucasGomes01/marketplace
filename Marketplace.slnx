@@ -6,6 +6,7 @@
     <Project Path="src/building-blocks/BuildingBlocks.Auth/BuildingBlocks.Auth.csproj" />
     <Project Path="src/building-blocks/BuildingBlocks.Messaging/BuildingBlocks.Messaging.csproj" />
     <Project Path="src/building-blocks/BuildingBlocks.Observability/BuildingBlocks.Observability.csproj" />
+    <Project Path="src/building-blocks/BuildingBlocks.Outbox/BuildingBlocks.Outbox.csproj" />
   </Folder>
   <Folder Name="/src/gateway/">
     <Project Path="src/gateway/Gateway/Gateway.csproj" />
@@ -32,6 +33,7 @@
   <Folder Name="/tests/" />
   <Folder Name="/tests/BuildingBlocks/">
     <Project Path="tests/BuildingBlocks/BuildingBlocks.Auth.UnitTests/BuildingBlocks.Auth.UnitTests.csproj" />
+    <Project Path="tests/BuildingBlocks/BuildingBlocks.Outbox.IntegrationTests/BuildingBlocks.Outbox.IntegrationTests.csproj" />
     <Project Path="tests/BuildingBlocks/BuildingBlocks.UnitTests/BuildingBlocks.UnitTests.csproj" />
   </Folder>
   <Folder Name="/tests/Cart/">

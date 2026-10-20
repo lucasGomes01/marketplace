@@ -13,10 +13,13 @@ import (
 
 var now = time.Date(2026, 10, 13, 12, 0, 0, 0, time.UTC)
 
+// memoryRepo imita o store: pedido e evento são gravados juntos (ou nenhum dos dois) — o outbox em memória.
 type memoryRepo struct {
 	orders          map[string]*order.Order
+	outbox          []Event
 	shipmentWrites  int
 	conflictOnWrite bool
+	failWrites      bool
 }
 
 func newMemoryRepo() *memoryRepo { return &memoryRepo{orders: map[string]*order.Order{}} }
@@ -28,11 +31,15 @@ func clone(o *order.Order) *order.Order {
 	return &copied
 }
 
-func (r *memoryRepo) Insert(_ context.Context, o *order.Order) error {
+func (r *memoryRepo) Insert(_ context.Context, o *order.Order, event Event) error {
+	if r.failWrites {
+		return errors.New("database down")
+	}
 	if _, exists := r.orders[o.ID]; exists {
 		return ErrDuplicate
 	}
 	r.orders[o.ID] = clone(o)
+	r.outbox = append(r.outbox, event)
 	return nil
 }
 
@@ -44,7 +51,7 @@ func (r *memoryRepo) UpdateStatus(_ context.Context, o *order.Order) error {
 	return nil
 }
 
-func (r *memoryRepo) UpdateShipment(_ context.Context, o *order.Order, sellerID string, previous order.ShipmentStatus) error {
+func (r *memoryRepo) UpdateShipment(_ context.Context, o *order.Order, sellerID string, previous order.ShipmentStatus, event Event) error {
 	stored, ok := r.orders[o.ID]
 	if !ok {
 		return ErrNotFound
@@ -54,6 +61,7 @@ func (r *memoryRepo) UpdateShipment(_ context.Context, o *order.Order, sellerID 
 	}
 	r.shipmentWrites++
 	r.orders[o.ID] = clone(o)
+	r.outbox = append(r.outbox, event)
 	return nil
 }
 
@@ -92,27 +100,9 @@ func (r *memoryRepo) ListByBuyer(_ context.Context, buyerID string, limit int) (
 	return list, nil
 }
 
-type published struct {
-	eventType, key, eventID string
-	data                    any
-}
-
-type fakePublisher struct {
-	sent []published
-	fail bool
-}
-
-func (p *fakePublisher) Publish(_ context.Context, eventType, key, eventID string, data any) error {
-	if p.fail {
-		return errors.New("broker down")
-	}
-	p.sent = append(p.sent, published{eventType, key, eventID, data})
-	return nil
-}
-
-func newService() (*Service, *memoryRepo, *fakePublisher) {
-	repo, pub := newMemoryRepo(), &fakePublisher{}
-	return NewService(repo, pub, func() time.Time { return now }), repo, pub
+func newService() (*Service, *memoryRepo) {
+	repo := newMemoryRepo()
+	return NewService(repo, func() time.Time { return now }), repo
 }
 
 func checkedOut(checkoutID string) CartCheckedOut {
@@ -127,8 +117,8 @@ func checkedOut(checkoutID string) CartCheckedOut {
 	}
 }
 
-func TestPlaceOrderStoresAPendingOrderAndPublishesOrderPlaced(t *testing.T) {
-	svc, repo, pub := newService()
+func TestPlaceOrderStoresAPendingOrderTogetherWithOrderPlaced(t *testing.T) {
+	svc, repo := newService()
 
 	o, err := svc.PlaceOrder(context.Background(), checkedOut("order-1"))
 
@@ -141,13 +131,13 @@ func TestPlaceOrderStoresAPendingOrderAndPublishesOrderPlaced(t *testing.T) {
 	if _, ok := repo.orders["order-1"]; !ok {
 		t.Error("order was not stored")
 	}
-	if len(pub.sent) != 1 {
-		t.Fatalf("published %d events, want 1", len(pub.sent))
+	if len(repo.outbox) != 1 {
+		t.Fatalf("recorded %d events, want 1", len(repo.outbox))
 	}
-	sent := pub.sent[0]
-	placed, ok := sent.data.(OrderPlaced)
-	if sent.eventType != "order.placed" || sent.key != "order-1" || sent.eventID != "order-1" || !ok {
-		t.Fatalf("published %+v", sent)
+	sent := repo.outbox[0]
+	placed, ok := sent.Data.(OrderPlaced)
+	if sent.Type != "order.placed" || sent.Key != "order-1" || sent.ID != "order-1" || !ok {
+		t.Fatalf("recorded %+v", sent)
 	}
 	if placed.OrderID != "order-1" || placed.BuyerID != "buyer-1" || len(placed.Items) != 2 ||
 		placed.Items[0] != (PlacedItem{ProductID: "p-drill", Quantity: 2}) {
@@ -155,8 +145,9 @@ func TestPlaceOrderStoresAPendingOrderAndPublishesOrderPlaced(t *testing.T) {
 	}
 }
 
-func TestADuplicateCheckoutDoesNotCreateASecondOrderButRepublishes(t *testing.T) {
-	svc, repo, pub := newService()
+func TestADuplicateCheckoutCreatesNeitherASecondOrderNorASecondEvent(t *testing.T) {
+	// O order.placed da primeira vez já está no outbox (publicado ou pendente).
+	svc, repo := newService()
 	_, _ = svc.PlaceOrder(context.Background(), checkedOut("order-1"))
 
 	again, err := svc.PlaceOrder(context.Background(), checkedOut("order-1"))
@@ -167,13 +158,13 @@ func TestADuplicateCheckoutDoesNotCreateASecondOrderButRepublishes(t *testing.T)
 	if len(repo.orders) != 1 {
 		t.Errorf("stored %d orders, want 1", len(repo.orders))
 	}
-	if len(pub.sent) != 2 || pub.sent[1].eventID != "order-1" {
-		t.Errorf("expected order.placed to be republished with the same id, got %+v", pub.sent)
+	if len(repo.outbox) != 1 {
+		t.Errorf("recorded %d events, want 1", len(repo.outbox))
 	}
 }
 
 func TestAnInvalidEventIsReportedAsInvalid(t *testing.T) {
-	svc, repo, pub := newService()
+	svc, repo := newService()
 	badPrice := checkedOut("order-1")
 	badPrice.Items[0].UnitPrice = json.Number("1.999")
 	noItems := checkedOut("order-2")
@@ -184,27 +175,27 @@ func TestAnInvalidEventIsReportedAsInvalid(t *testing.T) {
 			t.Errorf("err = %v, want ErrInvalidEvent", err)
 		}
 	}
-	if len(repo.orders) != 0 || len(pub.sent) != 0 {
-		t.Errorf("nothing should be stored or published")
+	if len(repo.orders) != 0 || len(repo.outbox) != 0 {
+		t.Errorf("nothing should be stored or recorded")
 	}
 }
 
-func TestPublishFailureIsReturnedSoTheEventIsRetried(t *testing.T) {
-	svc, repo, pub := newService()
-	pub.fail = true
+func TestAStoreFailureIsReturnedSoTheEventIsRetried(t *testing.T) {
+	svc, repo := newService()
+	repo.failWrites = true
 
 	_, err := svc.PlaceOrder(context.Background(), checkedOut("order-1"))
 
 	if err == nil || errors.Is(err, ErrInvalidEvent) {
 		t.Fatalf("err = %v, want a retryable error", err)
 	}
-	if _, ok := repo.orders["order-1"]; !ok {
-		t.Error("order should be stored even if publishing failed (the retry republishes)")
+	if len(repo.orders) != 0 || len(repo.outbox) != 0 {
+		t.Error("neither the order nor the event may be stored")
 	}
 }
 
 func TestBuyersOnlySeeTheirOwnOrders(t *testing.T) {
-	svc, _, _ := newService()
+	svc, _ := newService()
 	_, _ = svc.PlaceOrder(context.Background(), checkedOut("order-1"))
 	other := checkedOut("order-2")
 	other.BuyerID = "buyer-2"
@@ -226,7 +217,7 @@ func TestBuyersOnlySeeTheirOwnOrders(t *testing.T) {
 }
 
 func TestStockReservedConfirmsTheOrder(t *testing.T) {
-	svc, repo, _ := newService()
+	svc, repo := newService()
 	_, _ = svc.PlaceOrder(context.Background(), checkedOut("order-1"))
 
 	if err := svc.ConfirmOrder(context.Background(), StockReserved{OrderID: "order-1"}); err != nil {
@@ -239,7 +230,7 @@ func TestStockReservedConfirmsTheOrder(t *testing.T) {
 }
 
 func TestStockRejectedRejectsTheOrderWithTheReason(t *testing.T) {
-	svc, repo, _ := newService()
+	svc, repo := newService()
 	_, _ = svc.PlaceOrder(context.Background(), checkedOut("order-1"))
 
 	err := svc.RejectOrder(context.Background(), StockRejected{OrderID: "order-1", Reason: "Estoque insuficiente: Furadeira", ProductIDs: []string{"p-drill"}})
@@ -253,7 +244,7 @@ func TestStockRejectedRejectsTheOrderWithTheReason(t *testing.T) {
 }
 
 func TestRepeatedStockEventsAreHarmless(t *testing.T) {
-	svc, repo, _ := newService()
+	svc, repo := newService()
 	_, _ = svc.PlaceOrder(context.Background(), checkedOut("order-1"))
 
 	for range 2 {
@@ -268,7 +259,7 @@ func TestRepeatedStockEventsAreHarmless(t *testing.T) {
 }
 
 func TestStockEventForAnUnknownOrIncompatibleOrderIsInvalid(t *testing.T) {
-	svc, _, _ := newService()
+	svc, _ := newService()
 	_, _ = svc.PlaceOrder(context.Background(), checkedOut("order-1"))
 	_ = svc.ConfirmOrder(context.Background(), StockReserved{OrderID: "order-1"})
 

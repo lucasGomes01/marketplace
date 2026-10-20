@@ -1,3 +1,4 @@
+using BuildingBlocks.Outbox;
 using Catalog.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,5 +11,5 @@ public sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> options)
     public DbSet<StockReservation> StockReservations => Set<StockReservation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(CatalogDbContext).Assembly);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(CatalogDbContext).Assembly).AddOutbox();
 }

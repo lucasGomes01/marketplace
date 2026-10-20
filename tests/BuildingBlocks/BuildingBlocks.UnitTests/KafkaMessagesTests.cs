@@ -45,4 +45,21 @@ public class KafkaMessagesTests
         Assert.Equal("order.placed", headers["event-type"]);
         Assert.Equal(EventId.ToString(), headers["event-id"]);
     }
+
+    [Fact]
+    public void An_envelope_serialized_ahead_of_time_becomes_the_same_message()
+    {
+        // O outbox grava o envelope pronto e o relay só monta a mensagem depois.
+        var payload = KafkaMessages.Serialize("order.placed", EventId, OccurredAt,
+            new SampleEvent(OrderId, 10.50m, ["Furadeira", "Peças"]));
+
+        var message = KafkaMessages.Create("order.placed", key: "order-key", EventId, payload);
+
+        var direct = Create();
+        Assert.Equal(direct.Key, message.Key);
+        Assert.Equal(direct.Value, message.Value);
+        Assert.Equal(
+            direct.Headers.Select(h => (h.Key, Encoding.UTF8.GetString(h.GetValueBytes()))),
+            message.Headers.Select(h => (h.Key, Encoding.UTF8.GetString(h.GetValueBytes()))));
+    }
 }

@@ -17,6 +17,10 @@ Decisão e porquês em `decisions/ADR-003-kafka.md`.
 - Headers: `event-type` (= `type`) e `event-id` (= `eventId`), para filtrar sem desserializar.
 - Entrega **at-least-once**: todo consumidor é idempotente (guarda `eventId` processado) e só faz commit do offset
   depois de processar.
+- **Publicação pelo outbox (ADR-005):** o produtor grava o evento (envelope pronto + `traceparent`) na tabela
+  `OutboxMessages` do próprio banco, na mesma transação da mudança; o relay publica em ordem de gravação e marca
+  `PublishedAt`. Um `eventId` só é registrado uma vez. Consequência: o evento pode sair alguns ms depois do commit
+  (ou bem depois, se o Kafka estiver fora), mas nunca se perde nem sai sem a mudança ter sido gravada.
 - **Consumer group = nome do serviço**: `orders-service`, `catalog-service`, `cart-service`.
 - Mudar contrato: só adicionar campos opcionais (compatível para trás) ou criar um evento/tópico `...-v2`.
 
@@ -31,7 +35,7 @@ Decisão e porquês em `decisions/ADR-003-kafka.md`.
 | `shipment.status-changed` | Orders | — (ainda sem consumidor) | `orderId` |
 
 ## cart.checked-out (Cart → Orders)
-Publicado por `POST /api/cart/checkout` (T-010). O carrinho é esvaziado logo depois de publicar.
+Registrado por `POST /api/cart/checkout` (T-010) na mesma transação que esvazia o carrinho (outbox, T-027).
 `checkoutId` é **determinístico** (derivado do carrinho e da sua última alteração) e é também o `eventId` e o
 **id do pedido**: repetir o checkout de um carrinho que não mudou não pode gerar dois pedidos (o Orders ignora id repetido).
 ```json
@@ -56,16 +60,15 @@ Estoque de **todos** os itens baixado. `eventId` = `orderId` (um resultado por p
 ## stock.rejected (Catalog → Orders)
 Tudo ou nada: se algum item não tem estoque (ou o produto não existe mais), nada é baixado. `reason` é legível
 (ex.: "Estoque insuficiente: Furadeira (pedido 3, disponível 2)") e vira o motivo do pedido `Rejected`.
-Pedido repetido → o Catalog republica o mesmo resultado (guardado em `StockReservations`), sem baixar de novo.
+Pedido repetido → o Catalog não faz nada: a reserva (`StockReservations`) e o resultado já foram gravados juntos.
 ```json
 { "orderId": "guid", "reason": "string", "productIds": ["guid"] }
 ```
 
 ## shipment.status-changed (Orders → ainda sem consumidor)
 Publicado a cada etapa do envio de um vendedor (T-024): `Picked`, `Packed`, `Shipped` (pelo vendedor) e `Delivered`
-(o comprador confirma). `eventId` = `orderId:sellerId:status` (determinístico). Repetir a requisição com o mesmo status
-**republica** o mesmo evento (corrige uma publicação que falhou depois de gravar; não há outbox, ver I-01).
-`changedAt` = quando a etapa aconteceu (não muda na republicação). Futuro: painel do vendedor (I-03), notificações.
+(o comprador confirma). `eventId` = `orderId:sellerId:status` (determinístico). Gravado no outbox junto com o envio;
+repetir a requisição com o mesmo status não grava nem publica de novo. `changedAt` = quando a etapa aconteceu. Futuro: painel do vendedor (I-03), notificações.
 ```json
 { "orderId": "guid", "buyerId": "guid", "sellerId": "guid", "status": "Shipped", "changedAt": "2026-10-19T12:00:00Z" }
 ```

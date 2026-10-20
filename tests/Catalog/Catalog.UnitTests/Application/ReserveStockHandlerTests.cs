@@ -13,6 +13,9 @@ internal sealed class FakeStockStore : IStockStore
     public Dictionary<Guid, StockReservation> Reservations { get; } = [];
     public bool SimulateConcurrencyConflict { get; set; }
 
+    /// <summary>Chamado no começo de cada gravação (ex.: para ver o que já tinha sido registrado no outbox).</summary>
+    public Action? BeforeSave { get; set; }
+
     public Task<StockReservation?> FindReservationAsync(Guid orderId, CancellationToken cancellationToken) =>
         Task.FromResult(Reservations.GetValueOrDefault(orderId));
 
@@ -21,6 +24,7 @@ internal sealed class FakeStockStore : IStockStore
 
     public Task SaveAsync(StockReservation reservation, CancellationToken cancellationToken)
     {
+        BeforeSave?.Invoke();
         if (SimulateConcurrencyConflict)
         {
             throw new StockConcurrencyException();
@@ -108,41 +112,45 @@ public class ReserveStockHandlerTests
     }
 
     [Fact]
-    public async Task A_repeated_event_does_not_reserve_again_but_republishes_the_outcome()
+    public async Task The_outcome_is_registered_before_saving_so_reservation_and_event_go_in_one_transaction()
     {
+        // Com o outbox, "publicar" só registra o evento no DbContext; ele é gravado no SaveChanges da reserva.
         var drill = AddProduct("Furadeira", 5);
-        var order = Order((drill, 2));
+        var registeredWhenSaving = -1;
+        _store.BeforeSave = () => registeredWhenSaving = _events.Published.Count;
+
+        await Handle(Order((drill, 1)));
+
+        Assert.Equal(1, registeredWhenSaving);
+    }
+
+    [Theory]
+    [InlineData(5, 2)] // reservado
+    [InlineData(1, 5)] // recusado
+    public async Task A_repeated_event_neither_reserves_again_nor_registers_the_outcome_again(int stock, int quantity)
+    {
+        // O resultado já está no outbox (publicado ou pendente) desde a primeira vez.
+        var drill = AddProduct("Furadeira", stock);
+        var order = Order((drill, quantity));
 
         await Handle(order);
+        var stockAfterFirst = drill.Stock;
         await Handle(order);
 
-        Assert.Equal(3, drill.Stock);
-        Assert.Equal(2, _events.Published.Count);
-        Assert.All(_events.Published, p => Assert.Equal(new StockReserved(OrderId), p.Data));
+        Assert.Equal(stockAfterFirst, drill.Stock);
+        Assert.Single(_events.Published);
     }
 
     [Fact]
-    public async Task A_repeated_rejection_is_republished_with_the_same_reason()
+    public async Task A_concurrency_conflict_propagates_so_the_event_is_retried()
     {
-        var drill = AddProduct("Furadeira", 1);
-        var order = Order((drill, 5));
-
-        await Handle(order);
-        await Handle(order);
-
-        var reasons = _events.Published.Select(p => Assert.IsType<StockRejected>(p.Data).Reason).Distinct();
-        Assert.Single(reasons);
-    }
-
-    [Fact]
-    public async Task A_concurrency_conflict_propagates_so_the_event_is_retried_and_nothing_is_published()
-    {
+        // A transação não é confirmada: nem a baixa nem o evento registrado ficam gravados.
         var drill = AddProduct("Furadeira", 1);
         _store.SimulateConcurrencyConflict = true;
 
         await Assert.ThrowsAsync<StockConcurrencyException>(() => Handle(Order((drill, 1))));
 
-        Assert.Empty(_events.Published);
+        Assert.Empty(_store.Reservations);
     }
 
     [Fact]
@@ -169,7 +177,7 @@ public class ReserveStockHandlerTests
         var rejected = Order((drill, 1)) with { OrderId = Guid.CreateVersion7() };
 
         await Handle(reserved);
-        await Handle(reserved); // repetido: republica, não conta de novo
+        await Handle(reserved); // repetido: não conta de novo
         await Handle(rejected);
 
         Assert.Equal(["reserved:1", "rejected:1"], recorded);

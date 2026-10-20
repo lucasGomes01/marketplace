@@ -70,6 +70,14 @@ timeseries('Reservas de estoque por minuto', 'reserved = estoque baixado; reject
   [[`sum by (outcome) (rate(marketplace_stock_reservations_total[$__rate_interval])) * 60`, '{{outcome}}']])
 y += 8
 
+// ---------------------------------------------------------------- Outbox
+row('Outbox — eventos esperando o Kafka (ADR-005)')
+timeseries('Eventos pendentes no outbox', 'Gravados junto com o dado e ainda não publicados. Perto de 0 = relay em dia; subindo = Kafka fora ou relay atrasado. Só a cópia com o relay ativo informa.', 12, 0,
+  [[`max by (service_name) (marketplace_outbox_pending{${svc}})`, '{{service_name}}']])
+timeseries('Idade do evento pendente mais antigo', 'Quanto o evento mais velho da fila espera para ir ao Kafka. É o atraso extra que o outbox pode causar.', 12, 12,
+  [[`max by (service_name) (marketplace_outbox_oldest_age_seconds{${svc}})`, '{{service_name}}']], { unit: 's' })
+y += 8
+
 // ---------------------------------------------------------------- k6
 row('Testes de carga (k6) — compare versões')
 bars('Pico de requisições/s por versão', 'Maior vazão sustentada (média de 1 min) de cada versão no período escolhido.', 12, 0,

@@ -24,8 +24,10 @@ public sealed record StockRejected(Guid OrderId, string Reason, IReadOnlyList<Gu
 }
 
 /// <summary>
-/// Baixa o estoque de um pedido, tudo ou nada, e publica o resultado. Idempotente pela reserva gravada junto com a
-/// baixa. Conflito de concorrência (última unidade disputada) sobe como exceção → o consumidor reprocessa.
+/// Baixa o estoque de um pedido, tudo ou nada, e publica o resultado. Baixa, reserva e evento vão numa só transação
+/// (o evento é registrado no outbox antes de salvar, ADR-005). Idempotente pela reserva: pedido repetido não faz
+/// nada, o resultado já está no outbox. Conflito de concorrência (última unidade disputada) sobe como exceção → o
+/// consumidor reprocessa.
 /// </summary>
 public sealed class ReserveStockHandler(IStockStore store, IEventPublisher events, TimeProvider clock)
     : IIntegrationEventHandler<OrderPlaced>
@@ -42,15 +44,15 @@ public sealed class ReserveStockHandler(IStockStore store, IEventPublisher event
             throw new InvalidEventException($"Order {order.OrderId} has no items.");
         }
 
-        var reservation = await store.FindReservationAsync(order.OrderId, cancellationToken);
-        if (reservation is null)
+        if (await store.FindReservationAsync(order.OrderId, cancellationToken) is not null)
         {
-            reservation = await ReserveAsync(order, cancellationToken);
-            await store.SaveAsync(reservation, cancellationToken);
-            Reservations.Add(1, new KeyValuePair<string, object?>("outcome", reservation.Outcome.ToString().ToLowerInvariant()));
+            return;
         }
 
+        var reservation = await ReserveAsync(order, cancellationToken);
         await PublishAsync(reservation, cancellationToken);
+        await store.SaveAsync(reservation, cancellationToken);
+        Reservations.Add(1, new KeyValuePair<string, object?>("outcome", reservation.Outcome.ToString().ToLowerInvariant()));
     }
 
     private async Task<StockReservation> ReserveAsync(OrderPlaced order, CancellationToken cancellationToken)

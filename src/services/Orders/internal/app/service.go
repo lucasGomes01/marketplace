@@ -1,5 +1,6 @@
-// Package app tem os casos de uso do Orders. Ele define as interfaces que usa (Repository, Publisher);
-// store e messaging as implementam — a dependência aponta para cá (mesma ideia do ADR-004 no .NET).
+// Package app tem os casos de uso do Orders. Ele define as interfaces que usa (Repository); store as implementa —
+// a dependência aponta para cá (mesma ideia do ADR-004 no .NET). Eventos não são publicados daqui: vão para o
+// Repository junto com a mudança e são gravados na mesma transação (outbox, ADR-005).
 package app
 
 import (
@@ -23,22 +24,26 @@ var (
 	ErrConflict = errors.New("app: concurrent change")
 )
 
-// Repository é a porta de persistência.
+// Event é um evento de integração a gravar no outbox junto com a mudança que o causou.
+type Event struct {
+	Type string // = tópico
+	Key  string // id do agregado (ordem no Kafka)
+	ID   string // eventId; consumidores ignoram repetidos
+	Data any
+}
+
+// Repository é a porta de persistência. Quem recebe um Event grava dado e evento numa só transação.
 type Repository interface {
-	Insert(ctx context.Context, o *order.Order) error
+	// Insert grava o pedido e o evento. Id repetido → ErrDuplicate (e nada é gravado).
+	Insert(ctx context.Context, o *order.Order, event Event) error
 	// UpdateStatus grava status, motivo e UpdatedAt. Inexistente → ErrNotFound.
 	UpdateStatus(ctx context.Context, o *order.Order) error
-	// UpdateShipment grava o envio do vendedor só se ele ainda estiver em previous; senão → ErrConflict.
-	UpdateShipment(ctx context.Context, o *order.Order, sellerID string, previous order.ShipmentStatus) error
+	// UpdateShipment grava o envio do vendedor e o evento só se o envio ainda estiver em previous; senão → ErrConflict.
+	UpdateShipment(ctx context.Context, o *order.Order, sellerID string, previous order.ShipmentStatus, event Event) error
 	Get(ctx context.Context, id string) (*order.Order, error)
 	ListByBuyer(ctx context.Context, buyerID string, limit int) ([]*order.Order, error)
 	// ListBySeller devolve pedidos Confirmed com envio do vendedor, mais recentes primeiro.
 	ListBySeller(ctx context.Context, sellerID string, limit int) ([]*order.Order, error)
-}
-
-// Publisher é a porta de publicação de eventos (envelope igual ao dos serviços .NET).
-type Publisher interface {
-	Publish(ctx context.Context, eventType, key, eventID string, data any) error
 }
 
 // Tipos de evento (= nomes dos tópicos, ver .ai/context/events.md).
@@ -108,17 +113,16 @@ const MaxOrdersListed = 50
 // Service reúne os casos de uso.
 type Service struct {
 	repo  Repository
-	pub   Publisher
 	clock func() time.Time
 	stats metrics
 }
 
-func NewService(repo Repository, pub Publisher, clock func() time.Time) *Service {
-	return &Service{repo: repo, pub: pub, clock: clock, stats: newMetrics()}
+func NewService(repo Repository, clock func() time.Time) *Service {
+	return &Service{repo: repo, clock: clock, stats: newMetrics()}
 }
 
-// PlaceOrder cria o pedido a partir do checkout (id do pedido = checkoutId) e publica order.placed.
-// Idempotente: checkout repetido não cria outro pedido, mas republica order.placed.
+// PlaceOrder cria o pedido a partir do checkout (id do pedido = checkoutId) com o order.placed na mesma transação.
+// Idempotente: checkout repetido não grava nada (o evento da primeira vez já está no outbox).
 func (s *Service) PlaceOrder(ctx context.Context, event CartCheckedOut) (*order.Order, error) {
 	items := make([]order.Item, 0, len(event.Items))
 	for _, i := range event.Items {
@@ -137,7 +141,8 @@ func (s *Service) PlaceOrder(ctx context.Context, event CartCheckedOut) (*order.
 		return nil, fmt.Errorf("%w: %v", ErrInvalidEvent, err)
 	}
 
-	switch err := s.repo.Insert(ctx, o); {
+	placed := Event{Type: EventOrderPlaced, Key: o.ID, ID: o.ID, Data: placedEvent(o)}
+	switch err := s.repo.Insert(ctx, o, placed); {
 	case errors.Is(err, ErrDuplicate):
 		if o, err = s.repo.Get(ctx, event.CheckoutID); err != nil {
 			return nil, fmt.Errorf("load duplicated order: %w", err)
@@ -146,10 +151,6 @@ func (s *Service) PlaceOrder(ctx context.Context, event CartCheckedOut) (*order.
 		return nil, fmt.Errorf("store order: %w", err)
 	default:
 		s.stats.placed(ctx)
-	}
-
-	if err := s.pub.Publish(ctx, EventOrderPlaced, o.ID, o.ID, placedEvent(o)); err != nil {
-		return nil, fmt.Errorf("publish %s: %w", EventOrderPlaced, err)
 	}
 	return o, nil
 }

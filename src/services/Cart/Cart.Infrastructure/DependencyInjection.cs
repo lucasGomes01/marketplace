@@ -1,4 +1,4 @@
-using BuildingBlocks.Messaging;
+using BuildingBlocks.Outbox;
 using Cart.Application.Abstractions;
 using Cart.Infrastructure.Catalog;
 using Cart.Infrastructure.Persistence;
@@ -29,7 +29,8 @@ public static class DependencyInjection
             http.Timeout = TimeSpan.FromSeconds(5);
         });
 
-        services.AddKafkaEventPublisher(configuration);
+        // cart.checked-out vai pelo outbox: gravado junto com o carrinho vazio, publicado pelo relay.
+        services.AddOutbox<CartDbContext>(configuration);
         services.TryAddSingleton(TimeProvider.System);
         return services;
     }

@@ -9,11 +9,15 @@ internal sealed class InMemoryCartRepository : ICartRepository
     public int Saves { get; private set; }
     public bool SimulateConcurrentUpdate { get; set; }
 
+    /// <summary>Chamado no começo de cada gravação (ex.: para ver o que já tinha sido registrado no outbox).</summary>
+    public Action? BeforeSave { get; set; }
+
     public Task<ShoppingCart?> FindByBuyerAsync(Guid buyerId, CancellationToken cancellationToken) =>
         Task.FromResult(Carts.GetValueOrDefault(buyerId));
 
     public Task SaveAsync(ShoppingCart cart, CancellationToken cancellationToken)
     {
+        BeforeSave?.Invoke();
         if (SimulateConcurrentUpdate)
         {
             throw new CartConcurrencyException();

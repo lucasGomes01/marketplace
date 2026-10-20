@@ -39,7 +39,8 @@ Api ──► Application ──► Domain          (as setas só apontam para d
 - `tests/X/X.UnitTests`: domínio, casos de uso com fakes em memória e **testes de arquitetura** (regra de dependência).
 - `tests/X/X.IntegrationTests`: `WebApplicationFactory` + **Testcontainers** (SQL Server e Kafka reais).
 - Compartilhados: `BuildingBlocks.Application` (`Result`, `Error`, `IHandler`, `AddHandlersFrom`),
-  `BuildingBlocks.Api` (`ToHttpResult`), `BuildingBlocks.Auth` (JWT), `BuildingBlocks.Messaging` (Kafka).
+  `BuildingBlocks.Api` (`ToHttpResult`), `BuildingBlocks.Auth` (JWT), `BuildingBlocks.Messaging` (Kafka),
+  `BuildingBlocks.Outbox` (evento na mesma transação do dado + relay para o Kafka, ADR-005).
 - Referência completa: serviço **Users**.
 
 ## Orders (Go)
@@ -47,8 +48,9 @@ Api ──► Application ──► Domain          (as setas só apontam para d
 cmd/orders/main.go        wiring
 internal/order/           domínio (Order, status, regras): testes unitários
 internal/api/             handlers HTTP (net/http, roteamento do Go 1.22+)
-internal/store/           repositório SQL Server
-internal/messaging/       consumer/producer Kafka (franz-go)
+internal/store/           repositório SQL Server (+ tabela do outbox e lock do relay)
+internal/outbox/          relay do outbox: publica em ordem, um ativo por vez (ADR-005)
+internal/messaging/       consumer Kafka e transporte do relay (franz-go)
 ```
 
 ## Comunicação
@@ -60,28 +62,36 @@ internal/messaging/       consumer/producer Kafka (franz-go)
   Cada serviço consome com seu próprio consumer group (`orders-service`, `catalog-service`...).
 - Kafka UI em http://localhost:8080 para ver tópicos, mensagens e offsets dos grupos.
 - Consumidores devem ser **idempotentes** (guardar o `eventId` já processado).
+- **Publicação pelo outbox (T-027, ADR-005):** nenhum serviço publica direto no Kafka. O evento é gravado na tabela
+  `OutboxMessages` do próprio banco, **na mesma transação** da mudança; um relay em segundo plano publica em ordem
+  (uma instância ativa por serviço, lock `sp_getapplock`) e marca `PublishedAt`. A API não depende do Kafka estar no
+  ar: o evento espera no outbox. Painel "Outbox" no Grafana: pendentes e idade do mais antigo.
 - .NET: `AddKafkaEventConsumer<TEvent,THandler>(tópico, grupo)` (BuildingBlocks.Messaging) — escopo de DI por mensagem,
   commit só depois de processar, nova tentativa com backoff, JSON inválido/`InvalidEventException` registrados e pulados.
   Go (Orders): mesmo comportamento em `internal/messaging`.
 
 ## Fluxo de checkout (implementado até a T-012)
-1. `POST /api/cart/checkout` → o Cart publica `cart.checked-out` (itens com snapshot de preço) e esvazia o carrinho.
-   Responde `202 { checkoutId, orderId }` (o pedido nasce de forma assíncrona; `orderId` = `checkoutId`).
-2. O Orders consome → cria `Order(Pending)` → publica `order.placed`.
-3. O Catalog consome `order.placed` → baixa o estoque (tudo ou nada, na mesma transação da `StockReservation`;
-   `rowversion` em `Products` resolve a disputa pela última unidade) → publica `stock.reserved` ou `stock.rejected`.
+1. `POST /api/cart/checkout` → o Cart esvazia o carrinho e grava `cart.checked-out` (itens com snapshot de preço) no
+   outbox, na mesma transação. Responde `202 { checkoutId, orderId }` (o pedido nasce de forma assíncrona;
+   `orderId` = `checkoutId`), mesmo com o Kafka fora.
+2. O Orders consome → cria `Order(Pending)` com `order.placed` no outbox (mesma transação).
+3. O Catalog consome `order.placed` → baixa o estoque (tudo ou nada, na mesma transação da `StockReservation` e do
+   evento de resultado; `rowversion` em `Products` resolve a disputa pela última unidade) → `stock.reserved` ou `stock.rejected`.
 4. O Orders consome → `Confirmed` ou `Rejected`.
 
 ## Envio (T-023/T-024)
 Cada pedido tem **um envio por vendedor** (`OrderShipments`). Pedido `Confirmed` → o vendedor avança o dele em
 `PUT /api/shipments/{orderId}/status` (`Picked → Packed → Shipped`); o comprador confirma o recebimento em
-`POST /api/orders/{id}/shipments/{sellerId}/delivery` (`Delivered`). Cada etapa publica `shipment.status-changed`.
+`POST /api/orders/{id}/shipments/{sellerId}/delivery` (`Delivered`). Cada etapa grava `shipment.status-changed` no
+outbox junto com o envio.
 
 ## Observabilidade (T-022)
 - OpenTelemetry em todos os serviços (.NET: `BuildingBlocks.Observability`; Go: `internal/telemetry`), exportando OTLP
   para o serviço `observability` (Grafana + Prometheus + Tempo + Loki). Sem `OTEL_EXPORTER_OTLP_ENDPOINT`, nada é exportado.
 - O trace atravessa o Kafka: quem publica grava `traceparent` (W3C) nos headers; quem consome continua o trace.
-- Métricas de negócio: `marketplace.orders{status}`, `marketplace.order.settle.duration`, `marketplace.stock.reservations{outcome}`.
+  Com o outbox, o `traceparent` da requisição é gravado na linha e o relay o usa como pai do span de envio.
+- Métricas de negócio: `marketplace.orders{status}`, `marketplace.order.settle.duration`, `marketplace.stock.reservations{outcome}`,
+  `marketplace.outbox.pending` e `marketplace.outbox.oldest_age` (por serviço).
 - Testes de carga (k6) vão para o mesmo Prometheus com `versao`/`cenario` — painel "Marketplace" compara versões.
 
 ## Autenticação

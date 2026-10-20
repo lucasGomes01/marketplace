@@ -26,8 +26,8 @@ func (s *Service) ConfirmDelivery(ctx context.Context, buyerID, orderID, sellerI
 	return s.moveShipment(ctx, o, sellerID, func() error { return o.ConfirmDelivery(sellerID, s.clock()) })
 }
 
-// moveShipment aplica a regra, grava só se mudou e publica sempre: repetir a requisição republica o mesmo evento,
-// o que corrige uma publicação que falhou depois de gravar (não há outbox, ver I-01).
+// moveShipment aplica a regra e, se o status mudou, grava o envio e o shipment.status-changed na mesma transação
+// (outbox). Repetir a requisição com o mesmo status não grava nada: o evento já está no outbox.
 func (s *Service) moveShipment(ctx context.Context, o *order.Order, sellerID string, apply func() error) (*order.Order, error) {
 	before, ok := o.Shipment(sellerID)
 	if !ok {
@@ -37,20 +37,19 @@ func (s *Service) moveShipment(ctx context.Context, o *order.Order, sellerID str
 		return nil, err
 	}
 	after, _ := o.Shipment(sellerID)
-	if after.Status != before.Status {
-		if err := s.repo.UpdateShipment(ctx, o, sellerID, before.Status); err != nil {
-			return nil, err
-		}
+	if after.Status == before.Status {
+		return o, nil
 	}
-	if after.Status == order.ShipmentAwaitingPicking {
-		return o, nil // nada aconteceu ainda: não há o que anunciar
+	changed := Event{
+		Type: EventShipmentStatusChanged,
+		Key:  o.ID,
+		ID:   o.ID + ":" + sellerID + ":" + string(after.Status),
+		Data: ShipmentStatusChanged{
+			OrderID: o.ID, BuyerID: o.BuyerID, SellerID: sellerID, Status: after.Status, ChangedAt: after.ReachedAt(after.Status),
+		},
 	}
-	event := ShipmentStatusChanged{
-		OrderID: o.ID, BuyerID: o.BuyerID, SellerID: sellerID, Status: after.Status, ChangedAt: after.ReachedAt(after.Status),
-	}
-	eventID := o.ID + ":" + sellerID + ":" + string(after.Status)
-	if err := s.pub.Publish(ctx, EventShipmentStatusChanged, o.ID, eventID, event); err != nil {
-		return nil, fmt.Errorf("publish %s: %w", EventShipmentStatusChanged, err)
+	if err := s.repo.UpdateShipment(ctx, o, sellerID, before.Status, changed); err != nil {
+		return nil, err
 	}
 	return o, nil
 }
