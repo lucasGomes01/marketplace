@@ -17,9 +17,15 @@ public static class KafkaTracing
     private static readonly ActivitySource Source = new(SourceName);
 
     /// <summary>Abre o span de envio e grava o contexto dele nos headers.</summary>
-    public static Activity? StartPublish(string topic, Headers headers)
+    /// <param name="parentTraceParent">
+    /// <c>traceparent</c> de quem registrou o evento, quando a publicação acontece depois e fora da requisição
+    /// (relay do outbox). Sem ele, o pai é a atividade atual.
+    /// </param>
+    public static Activity? StartPublish(string topic, Headers headers, string? parentTraceParent = null)
     {
-        var activity = Source.StartActivity($"{topic} publish", ActivityKind.Producer);
+        var activity = ActivityContext.TryParse(parentTraceParent, null, isRemote: false, out var parent)
+            ? Source.StartActivity($"{topic} publish", ActivityKind.Producer, parent)
+            : Source.StartActivity($"{topic} publish", ActivityKind.Producer);
         if (activity is not null)
         {
             Tag(activity, topic, "send");

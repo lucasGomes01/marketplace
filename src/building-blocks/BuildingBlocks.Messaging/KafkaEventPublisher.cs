@@ -40,10 +40,19 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
         }).Build();
     }
 
-    public async Task PublishAsync<T>(string eventType, string key, Guid eventId, T data, CancellationToken cancellationToken)
+    public Task PublishAsync<T>(string eventType, string key, Guid eventId, T data, CancellationToken cancellationToken) =>
+        SendAsync(eventType, key, eventId, KafkaMessages.Serialize(eventType, eventId, _clock.GetUtcNow(), data),
+            parentTraceParent: null, cancellationToken);
+
+    /// <summary>
+    /// Publica um envelope já serializado (o relay do outbox usa isto). <paramref name="parentTraceParent"/> liga o
+    /// span de envio ao trace de quem registrou o evento.
+    /// </summary>
+    public async Task SendAsync(
+        string eventType, string key, Guid eventId, string payload, string? parentTraceParent, CancellationToken cancellationToken)
     {
-        var message = KafkaMessages.Create(eventType, key, eventId, _clock.GetUtcNow(), data);
-        using var activity = KafkaTracing.StartPublish(eventType, message.Headers);
+        var message = KafkaMessages.Create(eventType, key, eventId, payload);
+        using var activity = KafkaTracing.StartPublish(eventType, message.Headers, parentTraceParent);
         try
         {
             var result = await _producer.ProduceAsync(eventType, message, cancellationToken);
@@ -73,7 +82,8 @@ public static class MessagingExtensions
             .Bind(configuration.GetSection(KafkaOptions.SectionName))
             .Validate(o => !string.IsNullOrWhiteSpace(o.BootstrapServers), "Kafka:BootstrapServers is required.")
             .ValidateOnStart();
-        services.AddSingleton<IEventPublisher, KafkaEventPublisher>();
+        services.AddSingleton<KafkaEventPublisher>();
+        services.AddSingleton<IEventPublisher>(sp => sp.GetRequiredService<KafkaEventPublisher>());
         return services;
     }
 }

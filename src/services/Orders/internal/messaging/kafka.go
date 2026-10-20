@@ -6,13 +6,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/plugin/kotel"
 	"go.opentelemetry.io/otel/trace"
+
+	"marketplace/orders/internal/outbox"
 )
 
 // Envelope de todo evento: { eventId, type, occurredAt, data }.
@@ -36,37 +38,39 @@ func tracer() *kotel.Tracer { return kotel.NewTracer() }
 // Tracing é a opção do cliente franz-go que liga os hooks de trace (use também no cliente do Publisher).
 func Tracing() kgo.Opt { return kgo.WithHooks(kotel.NewKotel(kotel.WithTracer(tracer())).Hooks()...) }
 
-// Publisher publica eventos no tópico de mesmo nome do tipo.
+// Publisher é o transporte do relay do outbox: envia ao tópico de mesmo nome do tipo o envelope já gravado.
 type Publisher struct {
 	client *kgo.Client
-	clock  func() time.Time
 }
 
-func NewPublisher(client *kgo.Client, clock func() time.Time) *Publisher {
-	return &Publisher{client: client, clock: clock}
-}
+var _ outbox.Transport = (*Publisher)(nil)
 
-// Publish espera a confirmação do broker (acks de todas as réplicas, produtor idempotente — padrão do franz-go).
-func (p *Publisher) Publish(ctx context.Context, eventType, key, eventID string, data any) error {
-	value, err := json.Marshal(struct {
-		EventID    string    `json:"eventId"`
-		Type       string    `json:"type"`
-		OccurredAt time.Time `json:"occurredAt"`
-		Data       any       `json:"data"`
-	}{eventID, eventType, p.clock().UTC(), data})
-	if err != nil {
-		return fmt.Errorf("encode %s: %w", eventType, err)
+func NewPublisher(client *kgo.Client) *Publisher { return &Publisher{client: client} }
+
+// SendBatch dispara o lote inteiro em ordem (Produce é assíncrono) e espera todas as confirmações do broker (acks de
+// todas as réplicas, produtor idempotente — padrão do franz-go, que mantém a ordem por partição). O span de envio de
+// cada mensagem é filho do traceparent gravado com o evento: o trace da requisição continua mesmo publicando depois.
+func (p *Publisher) SendBatch(ctx context.Context, batch []outbox.Message) []error {
+	errs := make([]error, len(batch))
+	var acks sync.WaitGroup
+	acks.Add(len(batch))
+	for i, m := range batch {
+		record := &kgo.Record{
+			Topic: m.Type,
+			Key:   []byte(m.Key),
+			Value: m.Payload,
+			Headers: []kgo.RecordHeader{
+				{Key: headerEventType, Value: []byte(m.Type)},
+				{Key: headerEventID, Value: []byte(m.EventID)},
+			},
+		}
+		p.client.Produce(outbox.ContextWithTraceParent(ctx, m.TraceParent), record, func(_ *kgo.Record, err error) {
+			errs[i] = err
+			acks.Done()
+		})
 	}
-	record := &kgo.Record{
-		Topic: eventType,
-		Key:   []byte(key),
-		Value: value,
-		Headers: []kgo.RecordHeader{
-			{Key: headerEventType, Value: []byte(eventType)},
-			{Key: headerEventID, Value: []byte(eventID)},
-		},
-	}
-	return p.client.ProduceSync(ctx, record).FirstErr()
+	acks.Wait()
+	return errs
 }
 
 func (p *Publisher) Close() { p.client.Close() }

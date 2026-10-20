@@ -76,10 +76,15 @@ O vendedor avança até `Shipped`; o **comprador** confirma `Delivered` ("Recebi
 | T-025 | **Telas:** "Pedidos a despachar" (vendedor) e linha do tempo + "Recebi" em "meus pedidos" (comprador) | Web | T-024 | done |
 | T-026 | E2E estendido: compra → separado → embalado → enviado → recebido | Infra | T-025 | done |
 
+## Fase 8 — Confiabilidade dos eventos (decidida em 2026-10-20)
+| ID | Tarefa | Serviço | Depende | Status |
+|---|---|---|---|---|
+| T-027 | Outbox: evento gravado na mesma transação do dado + relay para o Kafka (Cart, Catalog, Orders), métricas e ADR-005 | Cart + Catalog + Orders + Infra | T-026 | done |
+
 ## Ideias (pós-MVP)
 | ID | Ideia | Status |
 |---|---|---|
-| I-01 | Outbox pattern para publicar eventos de forma transacional | idea |
+| I-01 | Outbox pattern para publicar eventos de forma transacional | virou **T-027** |
 | I-02 | Pagamento em modo teste (Stripe/Mercado Pago) com split para o vendedor | idea |
 | I-03 | Painel do vendedor (vendas, estoque) | idea |
 | I-04 | Avaliações de comprador ↔ vendedor | idea |

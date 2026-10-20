@@ -2,9 +2,13 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using BuildingBlocks.Application.Messaging;
+using BuildingBlocks.Messaging;
+using BuildingBlocks.Outbox;
 using Catalog.Application.Abstractions;
 using Catalog.Application.ReserveStock;
+using Catalog.Infrastructure.Persistence;
 using Confluent.Kafka;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Catalog.IntegrationTests;
@@ -25,9 +29,10 @@ public class StockReservationTests(CatalogApiFactory factory)
     private Task<int> StockOf(Guid productId) =>
         factory.CreateClient().GetFromJsonAsync<ProductBody>($"/products/{productId}").ContinueWith(t => t.Result!.Stock);
 
+    /// <summary>Faz o papel do Orders: publica direto no Kafka (o IEventPublisher do Catalog grava no outbox dele).</summary>
     private async Task PublishOrderPlaced(Guid orderId, params (Guid ProductId, int Quantity)[] items)
     {
-        var publisher = factory.Services.GetRequiredService<IEventPublisher>();
+        var publisher = factory.Services.GetRequiredService<KafkaEventPublisher>();
         var order = new OrderPlaced(orderId, Guid.CreateVersion7(), Guid.CreateVersion7(),
             items.Select(i => new OrderPlacedItem(i.ProductId, i.Quantity)).ToList());
         await publisher.PublishAsync(OrderPlaced.EventType, orderId.ToString(), orderId, order, CancellationToken.None);
@@ -73,7 +78,7 @@ public class StockReservationTests(CatalogApiFactory factory)
     }
 
     [Fact]
-    public async Task A_repeated_order_placed_does_not_reserve_twice()
+    public async Task A_repeated_order_placed_neither_reserves_nor_publishes_twice()
     {
         var drill = await CreateProduct("Furadeira", 5);
         var orderId = Guid.CreateVersion7();
@@ -81,8 +86,13 @@ public class StockReservationTests(CatalogApiFactory factory)
         await PublishOrderPlaced(orderId, (drill.Id, 2));
         await PublishOrderPlaced(orderId, (drill.Id, 2));
 
-        Assert.Equal(2, Messages("stock.reserved", orderId, expected: 2).Count);
+        Assert.Single(Messages("stock.reserved", orderId, expected: 2, seconds: 10));
         Assert.Equal(3, await StockOf(drill.Id));
+        await using var scope = factory.Services.CreateAsyncScope();
+        var outbox = scope.ServiceProvider.GetRequiredService<CatalogDbContext>().Set<OutboxMessage>();
+        var recorded = await outbox.AsNoTracking().Where(m => m.EventId == orderId).ToListAsync();
+        var message = Assert.Single(recorded);
+        Assert.NotNull(message.PublishedAt);
     }
 
     [Fact]

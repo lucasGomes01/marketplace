@@ -20,16 +20,16 @@ func confirmedOrder(t *testing.T, svc *Service, id string) {
 	}
 }
 
-func lastPublished(t *testing.T, pub *fakePublisher) published {
+func lastRecorded(t *testing.T, repo *memoryRepo) Event {
 	t.Helper()
-	if len(pub.sent) == 0 {
-		t.Fatal("nothing published")
+	if len(repo.outbox) == 0 {
+		t.Fatal("nothing recorded")
 	}
-	return pub.sent[len(pub.sent)-1]
+	return repo.outbox[len(repo.outbox)-1]
 }
 
-func TestSellerAdvancesTheirShipmentAndAnEventIsPublished(t *testing.T) {
-	svc, repo, pub := newService()
+func TestSellerAdvancesTheirShipmentAndTheEventIsRecordedWithIt(t *testing.T) {
+	svc, repo := newService()
 	confirmedOrder(t, svc, "order-1")
 
 	o, err := svc.AdvanceShipment(context.Background(), "s-ana", "order-1", order.ShipmentPicked)
@@ -43,10 +43,10 @@ func TestSellerAdvancesTheirShipmentAndAnEventIsPublished(t *testing.T) {
 	if s, _ := repo.orders["order-1"].Shipment("s-ana"); s.Status != order.ShipmentPicked {
 		t.Errorf("stored shipment = %+v", s)
 	}
-	sent := lastPublished(t, pub)
-	event, ok := sent.data.(ShipmentStatusChanged)
-	if sent.eventType != "shipment.status-changed" || sent.key != "order-1" || sent.eventID != "order-1:s-ana:Picked" || !ok {
-		t.Fatalf("published %+v", sent)
+	sent := lastRecorded(t, repo)
+	event, ok := sent.Data.(ShipmentStatusChanged)
+	if sent.Type != "shipment.status-changed" || sent.Key != "order-1" || sent.ID != "order-1:s-ana:Picked" || !ok {
+		t.Fatalf("recorded %+v", sent)
 	}
 	want := ShipmentStatusChanged{OrderID: "order-1", BuyerID: "buyer-1", SellerID: "s-ana", Status: order.ShipmentPicked, ChangedAt: now}
 	if event != want {
@@ -54,11 +54,12 @@ func TestSellerAdvancesTheirShipmentAndAnEventIsPublished(t *testing.T) {
 	}
 }
 
-func TestRepeatingTheSameStatusRepublishesWithoutWritingAgain(t *testing.T) {
-	svc, repo, pub := newService()
+func TestRepeatingTheSameStatusSucceedsWithoutWritingOrRecordingAgain(t *testing.T) {
+	// Antes do outbox, repetir republicava para corrigir uma publicação perdida; agora o evento já está gravado.
+	svc, repo := newService()
 	confirmedOrder(t, svc, "order-1")
 	_, _ = svc.AdvanceShipment(context.Background(), "s-ana", "order-1", order.ShipmentPicked)
-	before := len(pub.sent)
+	before := len(repo.outbox)
 
 	if _, err := svc.AdvanceShipment(context.Background(), "s-ana", "order-1", order.ShipmentPicked); err != nil {
 		t.Fatalf("repeat: %v", err)
@@ -67,13 +68,13 @@ func TestRepeatingTheSameStatusRepublishesWithoutWritingAgain(t *testing.T) {
 	if repo.shipmentWrites != 1 {
 		t.Errorf("writes = %d, want 1", repo.shipmentWrites)
 	}
-	if len(pub.sent) != before+1 || lastPublished(t, pub).eventID != "order-1:s-ana:Picked" {
-		t.Errorf("expected the same event to be republished, got %+v", pub.sent[before:])
+	if len(repo.outbox) != before {
+		t.Errorf("recorded %d more events, want none", len(repo.outbox)-before)
 	}
 }
 
 func TestShipmentErrorsAreReported(t *testing.T) {
-	svc, repo, _ := newService()
+	svc, repo := newService()
 	confirmedOrder(t, svc, "order-1")
 	_, _ = svc.PlaceOrder(context.Background(), checkedOut("order-pending"))
 
@@ -101,24 +102,24 @@ func TestShipmentErrorsAreReported(t *testing.T) {
 	}
 }
 
-func TestAConcurrentChangeIsAConflictAndNothingIsPublished(t *testing.T) {
-	svc, repo, pub := newService()
+func TestAConcurrentChangeIsAConflictAndNoEventIsRecorded(t *testing.T) {
+	svc, repo := newService()
 	confirmedOrder(t, svc, "order-1")
 	repo.conflictOnWrite = true
-	before := len(pub.sent)
+	before := len(repo.outbox)
 
 	_, err := svc.AdvanceShipment(context.Background(), "s-ana", "order-1", order.ShipmentPicked)
 
 	if !errors.Is(err, ErrConflict) {
 		t.Errorf("err = %v, want ErrConflict", err)
 	}
-	if len(pub.sent) != before {
-		t.Errorf("published %d events on conflict", len(pub.sent)-before)
+	if len(repo.outbox) != before {
+		t.Errorf("recorded %d events on conflict", len(repo.outbox)-before)
 	}
 }
 
 func TestBuyerConfirmsDeliveryOfTheirOwnOrder(t *testing.T) {
-	svc, _, pub := newService()
+	svc, repo := newService()
 	confirmedOrder(t, svc, "order-1")
 	ctx := context.Background()
 	for _, step := range []order.ShipmentStatus{order.ShipmentPicked, order.ShipmentPacked, order.ShipmentShipped} {
@@ -138,8 +139,8 @@ func TestBuyerConfirmsDeliveryOfTheirOwnOrder(t *testing.T) {
 	if s, _ := o.Shipment("s-ana"); s.Status != order.ShipmentDelivered {
 		t.Errorf("shipment = %+v", s)
 	}
-	if got := lastPublished(t, pub); got.eventID != "order-1:s-ana:Delivered" {
-		t.Errorf("published %+v", got)
+	if got := lastRecorded(t, repo); got.ID != "order-1:s-ana:Delivered" {
+		t.Errorf("recorded %+v", got)
 	}
 	if _, err := svc.ConfirmDelivery(ctx, "buyer-1", "order-1", "s-bia"); !errors.Is(err, order.ErrInvalidTransition) {
 		t.Errorf("not shipped yet: err = %v, want ErrInvalidTransition", err)
@@ -147,7 +148,7 @@ func TestBuyerConfirmsDeliveryOfTheirOwnOrder(t *testing.T) {
 }
 
 func TestSellersSeeOnlyConfirmedOrdersWithTheirShipment(t *testing.T) {
-	svc, _, _ := newService()
+	svc, _ := newService()
 	confirmedOrder(t, svc, "order-1")
 	_, _ = svc.PlaceOrder(context.Background(), checkedOut("order-pending"))
 

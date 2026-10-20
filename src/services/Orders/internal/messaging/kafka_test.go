@@ -11,6 +11,8 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
+
+	"marketplace/orders/internal/outbox"
 )
 
 // startKafka sobe um Kafka real com os tópicos já criados (como o kafka-init do compose). Pulado com -short.
@@ -107,16 +109,19 @@ func runConsumer(t *testing.T, brokers []string, group string, handler Handler) 
 func TestKafkaWithRealBroker(t *testing.T) {
 	brokers := startKafka(t, "cart.checked-out", "order.placed")
 
-	t.Run("publisher writes the standard envelope with key and headers", func(t *testing.T) {
+	t.Run("the outbox transport sends the recorded envelope with key and headers", func(t *testing.T) {
 		client, err := kgo.NewClient(kgo.SeedBrokers(brokers...))
 		if err != nil {
 			t.Fatal(err)
 		}
-		pub := NewPublisher(client, func() time.Time { return time.Date(2026, 10, 13, 12, 0, 0, 0, time.UTC) })
+		pub := NewPublisher(client)
 		defer pub.Close()
+		payload, _ := outbox.Envelope("order.placed", "order-1", time.Date(2026, 10, 13, 12, 0, 0, 0, time.UTC), map[string]any{"orderId": "order-1"})
 
-		if err := pub.Publish(context.Background(), "order.placed", "order-1", "order-1", map[string]any{"orderId": "order-1"}); err != nil {
-			t.Fatalf("publish: %v", err)
+		errs := pub.SendBatch(context.Background(), []outbox.Message{{Type: "order.placed", Key: "order-1", EventID: "order-1", Payload: payload,
+			TraceParent: "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"}})
+		if len(errs) != 1 || errs[0] != nil {
+			t.Fatalf("send: %v", errs)
 		}
 
 		reader, _ := kgo.NewClient(kgo.SeedBrokers(brokers...), kgo.ConsumeTopics("order.placed"), kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()))
@@ -139,6 +144,58 @@ func TestKafkaWithRealBroker(t *testing.T) {
 		if env["eventId"] != "order-1" || env["type"] != "order.placed" || env["occurredAt"] != "2026-10-13T12:00:00Z" ||
 			env["data"].(map[string]any)["orderId"] != "order-1" {
 			t.Errorf("envelope = %v", env)
+		}
+	})
+
+	t.Run("a batch is delivered in order for the same key", func(t *testing.T) {
+		client, err := kgo.NewClient(kgo.SeedBrokers(brokers...))
+		if err != nil {
+			t.Fatal(err)
+		}
+		pub := NewPublisher(client)
+		defer pub.Close()
+		var batch []outbox.Message
+		for _, id := range []string{"batch-1", "batch-2", "batch-3", "batch-4", "batch-5"} {
+			payload, _ := outbox.Envelope("order.placed", id, time.Now(), map[string]any{"orderId": "order-batch"})
+			batch = append(batch, outbox.Message{Type: "order.placed", Key: "order-batch", EventID: id, Payload: payload})
+		}
+
+		for i, err := range pub.SendBatch(context.Background(), batch) {
+			if err != nil {
+				t.Fatalf("message %d: %v", i, err)
+			}
+		}
+
+		reader, _ := kgo.NewClient(kgo.SeedBrokers(brokers...), kgo.ConsumeTopics("order.placed"), kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()))
+		defer reader.Close()
+		var got []string
+		deadline := time.Now().Add(20 * time.Second)
+		for len(got) < len(batch) && time.Now().Before(deadline) {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			for _, r := range reader.PollFetches(ctx).Records() {
+				if string(r.Key) == "order-batch" {
+					got = append(got, string(r.Headers[1].Value))
+				}
+			}
+			cancel()
+		}
+		if len(got) != 5 || got[0] != "batch-1" || got[4] != "batch-5" {
+			t.Errorf("received %v, want batch-1..batch-5 in order", got)
+		}
+	})
+
+	t.Run("a batch to an unreachable broker reports an error per message", func(t *testing.T) {
+		client, err := kgo.NewClient(kgo.SeedBrokers("localhost:1"), kgo.RecordDeliveryTimeout(2*time.Second))
+		if err != nil {
+			t.Fatal(err)
+		}
+		pub := NewPublisher(client)
+		defer pub.Close()
+
+		errs := pub.SendBatch(context.Background(), []outbox.Message{{Type: "order.placed", Key: "k", EventID: "x", Payload: []byte("{}")}})
+
+		if len(errs) != 1 || errs[0] == nil {
+			t.Errorf("errs = %v, want one error", errs)
 		}
 	})
 

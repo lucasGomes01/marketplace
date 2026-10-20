@@ -9,14 +9,9 @@ namespace Cart.UnitTests.Application;
 internal sealed class FakeEventPublisher : IEventPublisher
 {
     public List<(string EventType, string Key, Guid EventId, object Data)> Published { get; } = [];
-    public bool Unavailable { get; set; }
 
     public Task PublishAsync<T>(string eventType, string key, Guid eventId, T data, CancellationToken cancellationToken)
     {
-        if (Unavailable)
-        {
-            throw new EventPublishingException("broker down");
-        }
         Published.Add((eventType, key, eventId, data!));
         return Task.CompletedTask;
     }
@@ -101,15 +96,17 @@ public class CheckoutHandlerTests
     }
 
     [Fact]
-    public async Task Broker_down_keeps_the_cart_and_reports_unavailable()
+    public async Task The_event_is_registered_before_the_cart_is_saved_so_both_go_in_one_transaction()
     {
+        // Com o outbox, "publicar" só registra o evento no DbContext; ele é gravado no SaveChanges do repositório.
         CartWith(("Furadeira", 10m, 1));
-        _events.Unavailable = true;
+        var registeredWhenSaving = -1;
+        _carts.BeforeSave = () => registeredWhenSaving = _events.Published.Count;
 
-        var error = Assert.Single((await Checkout()).Errors);
+        var result = await Checkout();
 
-        Assert.Equal((ErrorType.Unavailable, "events.unavailable"), (error.Type, error.Code));
-        Assert.Single(_carts.Carts[BuyerId].Items);
-        Assert.Equal(0, _carts.Saves);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, registeredWhenSaving);
+        Assert.Equal(1, _carts.Saves);
     }
 }

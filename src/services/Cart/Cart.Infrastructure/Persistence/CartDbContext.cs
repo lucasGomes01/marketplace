@@ -1,3 +1,4 @@
+using BuildingBlocks.Outbox;
 using Cart.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,5 +9,5 @@ public sealed class CartDbContext(DbContextOptions<CartDbContext> options) : DbC
     public DbSet<ShoppingCart> Carts => Set<ShoppingCart>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(CartDbContext).Assembly);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(CartDbContext).Assembly).AddOutbox();
 }

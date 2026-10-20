@@ -556,7 +556,7 @@
     {
       "type": "row",
       "id": 11,
-      "title": "Testes de carga (k6) — compare versões",
+      "title": "Outbox — eventos esperando o Kafka (ADR-005)",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -567,8 +567,127 @@
       "panels": []
     },
     {
-      "type": "bargauge",
+      "type": "timeseries",
       "id": 12,
+      "title": "Eventos pendentes no outbox",
+      "description": "Gravados junto com o dado e ainda não publicados. Perto de 0 = relay em dia; subindo = Kafka fora ou relay atrasado. Só a cópia com o relay ativo informa.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 27
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (service_name) (marketplace_outbox_pending{service_namespace=\"marketplace\"})",
+          "legendFormat": "{{service_name}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "id": 13,
+      "title": "Idade do evento pendente mais antigo",
+      "description": "Quanto o evento mais velho da fila espera para ir ao Kafka. É o atraso extra que o outbox pode causar.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 27
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (service_name) (marketplace_outbox_oldest_age_seconds{service_namespace=\"marketplace\"})",
+          "legendFormat": "{{service_name}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 14,
+      "title": "Testes de carga (k6) — compare versões",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "panels": []
+    },
+    {
+      "type": "bargauge",
+      "id": 15,
       "title": "Pico de requisições/s por versão",
       "description": "Maior vazão sustentada (média de 1 min) de cada versão no período escolhido.",
       "datasource": {
@@ -579,7 +698,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 27
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -614,7 +733,7 @@
     },
     {
       "type": "bargauge",
-      "id": 13,
+      "id": 16,
       "title": "Pior p95 por versão",
       "description": "Maior p95 de duração visto pelo k6 em cada versão. Menor é melhor.",
       "datasource": {
@@ -625,7 +744,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 27
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -660,7 +779,7 @@
     },
     {
       "type": "timeseries",
-      "id": 14,
+      "id": 17,
       "title": "Requisições/s (k6)",
       "description": "Vazão vista pelo k6 ao longo do teste.",
       "datasource": {
@@ -671,7 +790,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 34
+        "y": 43
       },
       "fieldConfig": {
         "defaults": {
@@ -713,7 +832,7 @@
     },
     {
       "type": "timeseries",
-      "id": 15,
+      "id": 18,
       "title": "Duração p95 (k6)",
       "description": "Do ponto de vista do usuário virtual (inclui a fila no gateway).",
       "datasource": {
@@ -724,7 +843,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 34
+        "y": 43
       },
       "fieldConfig": {
         "defaults": {
@@ -766,7 +885,7 @@
     },
     {
       "type": "timeseries",
-      "id": 16,
+      "id": 19,
       "title": "Usuários virtuais e falhas",
       "description": "VUs ativos e taxa de requisições com falha.",
       "datasource": {
@@ -777,7 +896,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 34
+        "y": 43
       },
       "fieldConfig": {
         "defaults": {
@@ -828,20 +947,20 @@
     },
     {
       "type": "row",
-      "id": 17,
+      "id": 20,
       "title": "Traces lentos",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 51
       },
       "panels": []
     },
     {
       "type": "table",
-      "id": 18,
+      "id": 21,
       "title": "Requisições mais lentas que 500 ms",
       "description": "Clique no trace para ver o caminho completo (ex.: checkout → Kafka → Orders → Catalog).",
       "datasource": {
@@ -852,7 +971,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 52
       },
       "targets": [
         {

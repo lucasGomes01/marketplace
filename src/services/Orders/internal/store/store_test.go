@@ -2,17 +2,21 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/url"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/mssql"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"go.opentelemetry.io/otel/trace"
 
 	"marketplace/orders/internal/app"
 	"marketplace/orders/internal/order"
+	"marketplace/orders/internal/outbox"
 )
 
 // startSQLServer sobe um SQL Server real (testcontainers-go). Pulado com -short.
@@ -73,7 +77,7 @@ func TestStoreWithRealSQLServer(t *testing.T) {
 
 	t.Run("insert and get round trip", func(t *testing.T) {
 		o := newOrder(t, "order-1", "buyer-1", base)
-		if err := s.Insert(ctx, o); err != nil {
+		if err := s.Insert(ctx, o, placed(o)); err != nil {
 			t.Fatalf("insert: %v", err)
 		}
 
@@ -96,8 +100,38 @@ func TestStoreWithRealSQLServer(t *testing.T) {
 	})
 
 	t.Run("duplicate id is reported as ErrDuplicate", func(t *testing.T) {
-		if err := s.Insert(ctx, newOrder(t, "order-1", "buyer-1", base)); !errors.Is(err, app.ErrDuplicate) {
+		again := newOrder(t, "order-1", "buyer-1", base)
+		if err := s.Insert(ctx, again, placed(again)); !errors.Is(err, app.ErrDuplicate) {
 			t.Errorf("err = %v, want ErrDuplicate", err)
+		}
+	})
+
+	t.Run("the event is stored with the order and a duplicate stores no second event", func(t *testing.T) {
+		events := pendingByID(t, s, "order-1")
+		if len(events) != 1 {
+			t.Fatalf("outbox has %d messages for order-1, want 1", len(events))
+		}
+		m := events[0]
+		var env map[string]any
+		_ = json.Unmarshal(m.Payload, &env)
+		if m.Type != "order.placed" || m.Key != "order-1" || env["eventId"] != "order-1" || env["type"] != "order.placed" ||
+			env["data"].(map[string]any)["orderId"] != "order-1" {
+			t.Errorf("message = %+v, envelope = %s", m, m.Payload)
+		}
+	})
+
+	t.Run("the traceparent of the request is stored with the event", func(t *testing.T) {
+		traceID, _ := trace.TraceIDFromHex("0af7651916cd43dd8448eb211c80319c")
+		spanID, _ := trace.SpanIDFromHex("b7ad6b7169203331")
+		traced := trace.ContextWithSpanContext(ctx, trace.NewSpanContext(trace.SpanContextConfig{TraceID: traceID, SpanID: spanID, TraceFlags: trace.FlagsSampled}))
+		o := newOrder(t, "order-traced", "buyer-5", base)
+
+		if err := s.Insert(traced, o, placed(o)); err != nil {
+			t.Fatal(err)
+		}
+
+		if m := pendingByID(t, s, "order-traced"); len(m) != 1 || m[0].TraceParent != "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01" {
+			t.Errorf("messages = %+v", m)
 		}
 	})
 
@@ -109,7 +143,7 @@ func TestStoreWithRealSQLServer(t *testing.T) {
 
 	t.Run("updates status, reason and updatedAt", func(t *testing.T) {
 		o := newOrder(t, "order-status", "buyer-3", base)
-		if err := s.Insert(ctx, o); err != nil {
+		if err := s.Insert(ctx, o, placed(o)); err != nil {
 			t.Fatal(err)
 		}
 		_ = o.Reject("Estoque insuficiente: Furadeira", base.Add(time.Minute))
@@ -139,7 +173,7 @@ func TestStoreWithRealSQLServer(t *testing.T) {
 
 	t.Run("updates a shipment only if it is still in the expected status", func(t *testing.T) {
 		o := newOrder(t, "order-ship", "buyer-4", base)
-		if err := s.Insert(ctx, o); err != nil {
+		if err := s.Insert(ctx, o, placed(o)); err != nil {
 			t.Fatal(err)
 		}
 		_ = o.Confirm(base)
@@ -147,11 +181,11 @@ func TestStoreWithRealSQLServer(t *testing.T) {
 		picked := base.Add(time.Hour)
 		_ = o.AdvanceShipment("s-ana", order.ShipmentPicked, picked)
 
-		if err := s.UpdateShipment(ctx, o, "s-ana", order.ShipmentAwaitingPicking); err != nil {
+		if err := s.UpdateShipment(ctx, o, "s-ana", order.ShipmentAwaitingPicking, shipped(o, "s-ana")); err != nil {
 			t.Fatalf("update: %v", err)
 		}
 		// Segunda gravação esperando o status antigo: alguém já mudou → conflito.
-		if err := s.UpdateShipment(ctx, o, "s-ana", order.ShipmentAwaitingPicking); !errors.Is(err, app.ErrConflict) {
+		if err := s.UpdateShipment(ctx, o, "s-ana", order.ShipmentAwaitingPicking, shipped(o, "s-ana")); !errors.Is(err, app.ErrConflict) {
 			t.Errorf("stale update: err = %v, want ErrConflict", err)
 		}
 
@@ -165,6 +199,10 @@ func TestStoreWithRealSQLServer(t *testing.T) {
 		}
 		if !got.UpdatedAt.Equal(picked) {
 			t.Errorf("UpdatedAt = %v, want %v", got.UpdatedAt, picked)
+		}
+		// Só a gravação que valeu registrou o evento; a do conflito não.
+		if events := pendingByID(t, s, "order-ship:s-ana:Picked"); len(events) != 1 || events[0].Key != "order-ship" {
+			t.Errorf("shipment events = %+v", events)
 		}
 	})
 
@@ -199,7 +237,8 @@ func TestStoreWithRealSQLServer(t *testing.T) {
 	t.Run("lists a buyer's orders newest first with a limit", func(t *testing.T) {
 		for i, id := range []string{"b2-old", "b2-new", "b2-mid"} {
 			created := base.Add(time.Duration([]int{1, 3, 2}[i]) * time.Hour)
-			if err := s.Insert(ctx, newOrder(t, id, "buyer-2", created)); err != nil {
+			o := newOrder(t, id, "buyer-2", created)
+			if err := s.Insert(ctx, o, placed(o)); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -215,6 +254,174 @@ func TestStoreWithRealSQLServer(t *testing.T) {
 			t.Errorf("items not loaded in the list: %+v", list[0])
 		}
 	})
+
+	t.Run("a commit that stored an event wakes the relay", func(t *testing.T) {
+		woken := 0
+		s.WakeOnEvent(func() { woken++ })
+		defer s.WakeOnEvent(nil)
+		o := newOrder(t, "order-wake", "buyer-6", base)
+
+		_ = s.Insert(ctx, o, placed(o))
+		_ = s.Insert(ctx, o, placed(o)) // duplicado: nada gravado, ninguém acordado
+
+		if woken != 1 {
+			t.Errorf("woken %d times, want 1", woken)
+		}
+	})
+
+	t.Run("relay operations: fail, publish, stats and cleanup", func(t *testing.T) {
+		o := newOrder(t, "order-relay", "buyer-7", base)
+		_ = s.Insert(ctx, o, placed(o))
+		m := pendingByID(t, s, "order-relay")[0]
+
+		if err := s.MarkFailed(ctx, m.Sequence, "broker down"); err != nil {
+			t.Fatal(err)
+		}
+		if again := pendingByID(t, s, "order-relay"); len(again) != 1 || again[0].Attempts != 1 {
+			t.Errorf("after a failure: %+v", again)
+		}
+		stats, err := s.Stats(ctx)
+		if err != nil || stats.Pending == 0 || stats.OldestPendingSince.IsZero() {
+			t.Errorf("stats = %+v, err = %v", stats, err)
+		}
+
+		published := time.Now().UTC().Add(-8 * 24 * time.Hour)
+		if err := s.MarkPublished(ctx, []int64{m.Sequence}, published); err != nil {
+			t.Fatal(err)
+		}
+		if left := pendingByID(t, s, "order-relay"); len(left) != 0 {
+			t.Errorf("still pending: %+v", left)
+		}
+		deleted, err := s.DeletePublishedBefore(ctx, time.Now().UTC().Add(-7*24*time.Hour))
+		if err != nil || deleted != 1 {
+			t.Errorf("deleted = %d, err = %v", deleted, err)
+		}
+	})
+
+	t.Run("only one relay per database holds the lock at a time", func(t *testing.T) {
+		first, err := s.Lock().TryAcquire(ctx)
+		if err != nil || first == nil {
+			t.Fatalf("first: %v, %v", first, err)
+		}
+		second, err := s.Lock().TryAcquire(ctx)
+		if err != nil || second != nil {
+			t.Fatalf("second should not get the lock: %v, %v", second, err)
+		}
+		if !first.Held(ctx) {
+			t.Error("first should still hold the lock")
+		}
+
+		_ = first.Release()
+		takenOver, err := s.Lock().TryAcquire(ctx)
+		if err != nil || takenOver == nil {
+			t.Fatalf("after release: %v, %v", takenOver, err)
+		}
+		_ = takenOver.Release()
+	})
+
+	t.Run("the relay sends pending events in order and retries after a failure", func(t *testing.T) {
+		drainOutbox(t, s)
+		var created []string
+		for _, id := range []string{"relay-a", "relay-b", "relay-c"} {
+			o := newOrder(t, id, "buyer-8", base)
+			if err := s.Insert(ctx, o, placed(o)); err != nil {
+				t.Fatal(err)
+			}
+			created = append(created, id)
+		}
+		transport := &flakyTransport{failBatches: 1}
+		relayCtx, stop := context.WithCancel(ctx)
+		done := make(chan struct{})
+		relay := &outbox.Relay{Store: s, Transport: transport, Lock: s.Lock(), Signal: outbox.NewSignal(), Clock: time.Now,
+			Options: outbox.Options{PollInterval: 100 * time.Millisecond}}
+		go func() { defer close(done); relay.Run(relayCtx) }()
+
+		waitUntil(t, func() bool { return len(transport.ids()) == 3 })
+		stop()
+		<-done
+
+		if got := transport.ids(); got[0] != created[0] || got[1] != created[1] || got[2] != created[2] {
+			t.Errorf("sent %v, want %v (the failure must not let later events overtake)", got, created)
+		}
+		if left := pendingByID(t, s, "relay-a"); len(left) != 0 {
+			t.Errorf("relay-a still pending: %+v", left)
+		}
+	})
+}
+
+func placed(o *order.Order) app.Event {
+	return app.Event{Type: app.EventOrderPlaced, Key: o.ID, ID: o.ID, Data: map[string]string{"orderId": o.ID}}
+}
+
+func shipped(o *order.Order, sellerID string) app.Event {
+	s, _ := o.Shipment(sellerID)
+	return app.Event{Type: app.EventShipmentStatusChanged, Key: o.ID, ID: o.ID + ":" + sellerID + ":" + string(s.Status), Data: map[string]string{"orderId": o.ID}}
+}
+
+// pendingByID são as mensagens pendentes no outbox com o eventId pedido.
+func pendingByID(t *testing.T, s *Store, eventID string) []outbox.Message {
+	t.Helper()
+	all, err := s.FetchPending(context.Background(), 10_000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var found []outbox.Message
+	for _, m := range all {
+		if m.EventID == eventID {
+			found = append(found, m)
+		}
+	}
+	return found
+}
+
+// drainOutbox marca como publicado tudo que outros subtestes deixaram pendente.
+func drainOutbox(t *testing.T, s *Store) {
+	t.Helper()
+	all, _ := s.FetchPending(context.Background(), 10_000)
+	for _, m := range all {
+		_ = s.MarkPublished(context.Background(), []int64{m.Sequence}, time.Now())
+	}
+}
+
+// flakyTransport simula o broker fora nos primeiros lotes (todo o lote falha) e depois aceita, registrando a ordem.
+type flakyTransport struct {
+	mu          sync.Mutex
+	failBatches int
+	sent        []string
+}
+
+func (f *flakyTransport) SendBatch(_ context.Context, batch []outbox.Message) []error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	errs := make([]error, len(batch))
+	if f.failBatches > 0 {
+		f.failBatches--
+		for i := range errs {
+			errs[i] = errors.New("broker down")
+		}
+		return errs
+	}
+	for _, m := range batch {
+		f.sent = append(f.sent, m.EventID)
+	}
+	return errs
+}
+
+func (f *flakyTransport) ids() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.sent...)
+}
+
+func waitUntil(t *testing.T, condition func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(30 * time.Second)
+	for !condition() {
+		if time.Now().After(deadline) {
+			t.Fatal("condition not met in 30s")
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 func ids(list []*order.Order) []string {

@@ -16,6 +16,7 @@ import (
 
 	"marketplace/orders/internal/app"
 	"marketplace/orders/internal/order"
+	"marketplace/orders/internal/outbox"
 )
 
 var databaseName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
@@ -65,10 +66,31 @@ INSERT INTO dbo.OrderShipments (OrderId, SellerId, Position, Status)
 SELECT i.OrderId, i.SellerId, MIN(i.Position), 'AwaitingPicking'
 FROM dbo.OrderItems i
 WHERE NOT EXISTS (SELECT 1 FROM dbo.OrderShipments s WHERE s.OrderId = i.OrderId AND s.SellerId = i.SellerId)
-GROUP BY i.OrderId, i.SellerId;`
+GROUP BY i.OrderId, i.SellerId;
 
-// Store guarda pedidos no SQL Server.
-type Store struct{ db *sql.DB }
+-- Outbox (ADR-005): eventos gravados na mesma transação do pedido; o relay publica e marca PublishedAt.
+IF OBJECT_ID('dbo.OutboxMessages') IS NULL
+CREATE TABLE dbo.OutboxMessages (
+    Sequence    BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    EventId     NVARCHAR(200)  NOT NULL CONSTRAINT UQ_OutboxMessages_EventId UNIQUE,
+    Type        NVARCHAR(200)  NOT NULL,
+    [Key]       NVARCHAR(200)  NOT NULL,
+    Payload     NVARCHAR(MAX)  NOT NULL,
+    TraceParent NVARCHAR(100)  NULL,
+    CreatedAt   DATETIMEOFFSET NOT NULL,
+    PublishedAt DATETIMEOFFSET NULL,
+    Attempts    INT            NOT NULL DEFAULT 0,
+    LastError   NVARCHAR(2000) NULL,
+    INDEX IX_OutboxMessages_Pending (Sequence) WHERE PublishedAt IS NULL,
+    INDEX IX_OutboxMessages_PublishedAt (PublishedAt) WHERE PublishedAt IS NOT NULL
+);`
+
+// Store guarda pedidos no SQL Server, com o outbox no mesmo banco.
+type Store struct {
+	db     *sql.DB
+	lockDB *sql.DB // conexões só para o lock do relay (ver Lock)
+	notify func()  // acorda o relay depois de um commit que gravou evento
+}
 
 // Open garante que o banco (parâmetro "database" do DSN) e as tabelas existem e devolve o Store.
 func Open(ctx context.Context, dsn string) (*Store, error) {
@@ -83,7 +105,23 @@ func Open(ctx context.Context, dsn string) (*Store, error) {
 		_ = db.Close()
 		return nil, fmt.Errorf("create schema: %w", err)
 	}
-	return &Store{db: db}, nil
+	lockDB, err := sql.Open("sqlserver", dsn)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	// Sem conexões ociosas: ao devolver a conexão do lock ela é fechada, e fechar a sessão libera o lock.
+	lockDB.SetMaxIdleConns(0)
+	return &Store{db: db, lockDB: lockDB}, nil
+}
+
+// WakeOnEvent registra quem acordar depois de um commit que gravou evento (nil desliga).
+func (s *Store) WakeOnEvent(notify func()) { s.notify = notify }
+
+func (s *Store) eventStored() {
+	if s.notify != nil {
+		s.notify()
+	}
 }
 
 func ensureDatabase(ctx context.Context, dsn string) error {
@@ -113,10 +151,10 @@ func ensureDatabase(ctx context.Context, dsn string) error {
 }
 
 // Close fecha as conexões.
-func (s *Store) Close() error { return s.db.Close() }
+func (s *Store) Close() error { return errors.Join(s.db.Close(), s.lockDB.Close()) }
 
-// Insert grava pedido e itens numa transação. Id repetido → app.ErrDuplicate.
-func (s *Store) Insert(ctx context.Context, o *order.Order) (err error) {
+// Insert grava pedido, itens, envios e o evento numa transação. Id repetido → app.ErrDuplicate (nada é gravado).
+func (s *Store) Insert(ctx context.Context, o *order.Order, event app.Event) (err error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -158,11 +196,34 @@ func (s *Store) Insert(ctx context.Context, o *order.Order) (err error) {
 			return fmt.Errorf("insert shipment %s: %w", shipment.SellerID, err)
 		}
 	}
-	return tx.Commit()
+	if err = insertEvent(ctx, tx, event, o.UpdatedAt); err != nil {
+		return err
+	}
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	s.eventStored()
+	return nil
 }
 
-// UpdateShipment grava o envio do vendedor e o UpdatedAt do pedido, só se o envio ainda estiver em previous.
-func (s *Store) UpdateShipment(ctx context.Context, o *order.Order, sellerID string, previous order.ShipmentStatus) (err error) {
+// insertEvent grava o evento no outbox dentro da transação de quem chamou, com o traceparent da requisição.
+func insertEvent(ctx context.Context, tx *sql.Tx, event app.Event, occurredAt time.Time) error {
+	payload, err := outbox.Envelope(event.Type, event.ID, occurredAt, event.Data)
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO dbo.OutboxMessages (EventId, Type, [Key], Payload, TraceParent, CreatedAt)
+		 VALUES (@p1, @p2, @p3, @p4, @p5, @p6)`,
+		event.ID, event.Type, event.Key, string(payload), nullable(outbox.TraceParent(ctx)), mssql.DateTimeOffset(time.Now().UTC()))
+	if err != nil {
+		return fmt.Errorf("insert outbox %s: %w", event.Type, err)
+	}
+	return nil
+}
+
+// UpdateShipment grava o envio do vendedor, o UpdatedAt do pedido e o evento, só se o envio ainda estiver em previous.
+func (s *Store) UpdateShipment(ctx context.Context, o *order.Order, sellerID string, previous order.ShipmentStatus, event app.Event) (err error) {
 	shipment, ok := o.Shipment(sellerID)
 	if !ok {
 		return app.ErrNotFound
@@ -192,7 +253,14 @@ func (s *Store) UpdateShipment(ctx context.Context, o *order.Order, sellerID str
 		o.ID, mssql.DateTimeOffset(o.UpdatedAt)); err != nil {
 		return fmt.Errorf("update order: %w", err)
 	}
-	return tx.Commit()
+	if err = insertEvent(ctx, tx, event, o.UpdatedAt); err != nil {
+		return err
+	}
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	s.eventStored()
+	return nil
 }
 
 // UpdateStatus grava a mudança de status (os itens nunca mudam depois de criados).

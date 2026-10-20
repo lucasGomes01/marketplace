@@ -62,6 +62,26 @@ public sealed class KafkaTracingTests : IDisposable
     }
 
     [Fact]
+    public void Publishing_later_continues_the_trace_of_who_recorded_the_event()
+    {
+        // O relay do outbox publica fora da requisição original: o traceparent gravado vira o pai do span.
+        string recordedTraceParent;
+        ActivityTraceId traceId;
+        using (var request = new ActivitySource(KafkaTracing.SourceName).StartActivity("checkout")!)
+        {
+            recordedTraceParent = request.Id!;
+            traceId = request.TraceId;
+        }
+        var message = KafkaMessages.Create("order.placed", "k", Guid.NewGuid(), DateTimeOffset.UtcNow, new { });
+
+        using var producer = KafkaTracing.StartPublish("order.placed", message.Headers, recordedTraceParent);
+
+        Assert.NotNull(producer);
+        Assert.Equal(traceId, producer.TraceId);
+        Assert.Equal(ActivityContext.Parse(recordedTraceParent, null).SpanId, producer.ParentSpanId);
+    }
+
+    [Fact]
     public void Message_without_traceparent_starts_a_new_trace()
     {
         using var consumer = KafkaTracing.StartProcess("order.placed", []);

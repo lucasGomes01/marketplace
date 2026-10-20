@@ -19,7 +19,7 @@ func TestOrderMetrics(t *testing.T) {
 	t.Cleanup(func() { otel.SetMeterProvider(previous) })
 
 	clock := now
-	svc := NewService(newMemoryRepo(), &fakePublisher{}, func() time.Time { return clock })
+	svc := NewService(newMemoryRepo(), func() time.Time { return clock })
 	ctx := context.Background()
 	_, _ = svc.PlaceOrder(ctx, checkedOut("order-1"))
 	_, _ = svc.PlaceOrder(ctx, checkedOut("order-1")) // repetido: não conta de novo

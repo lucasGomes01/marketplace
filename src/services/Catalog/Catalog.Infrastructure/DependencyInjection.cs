@@ -1,4 +1,5 @@
 using BuildingBlocks.Messaging;
+using BuildingBlocks.Outbox;
 using Catalog.Application.Abstractions;
 using Catalog.Application.ReserveStock;
 using Catalog.Infrastructure.Persistence;
@@ -19,8 +20,9 @@ public static class DependencyInjection
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IStockStore, StockStore>();
 
-        // Eventos: publica stock.reserved/stock.rejected e consome order.placed (grupo do serviço).
-        services.AddKafkaEventPublisher(configuration);
+        // Eventos: stock.reserved/stock.rejected vão pelo outbox (mesma transação da reserva) e o consumo de
+        // order.placed usa o grupo do serviço.
+        services.AddOutbox<CatalogDbContext>(configuration);
         services.AddKafkaEventConsumer<OrderPlaced, ReserveStockHandler>(OrderPlaced.EventType, "catalog-service");
         services.TryAddSingleton(TimeProvider.System);
 

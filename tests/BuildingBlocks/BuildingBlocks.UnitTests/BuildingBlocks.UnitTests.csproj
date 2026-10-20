@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\..\src\building-blocks\BuildingBlocks.Application\BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\..\src\building-blocks\BuildingBlocks.Api\BuildingBlocks.Api.csproj" />
     <ProjectReference Include="..\..\..\src\building-blocks\BuildingBlocks.Messaging\BuildingBlocks.Messaging.csproj" />
+    <ProjectReference Include="..\..\..\src\building-blocks\BuildingBlocks.Outbox\BuildingBlocks.Outbox.csproj" />
   </ItemGroup>
 
   <ItemGroup>
