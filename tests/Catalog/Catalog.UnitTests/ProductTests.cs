@@ -166,6 +166,110 @@ public class ProductTests
         AssertInvalid("quantity", () => product.RemoveStock(quantity, _clock));
     }
 
+    private Product CreateWith(ProductDetails details, decimal price = 199.90m) =>
+        Product.Create(SellerId, "Fone", null, Money.Create(price), 1, _clock, details);
+
+    [Fact]
+    public void Without_details_the_product_is_new_in_the_default_category_with_no_images()
+    {
+        var product = Create();
+
+        Assert.Equal((ProductCategories.Default, ProductCondition.New, false), (product.Category, product.Condition, product.FreeShipping));
+        Assert.Empty(product.ImageUrls);
+        Assert.Empty(product.Attributes);
+        Assert.Null(product.OriginalPrice);
+    }
+
+    [Fact]
+    public void Create_keeps_the_listing_details_normalized()
+    {
+        var product = CreateWith(new ProductDetails
+        {
+            Category = "  Eletronicos ",
+            Brand = "  Sony ",
+            Sku = " WH-1000 ",
+            Condition = ProductCondition.Used,
+            ImageUrls = [" https://cdn.example.com/a.webp ", "", "http://cdn.example.com/b.png"],
+            OriginalPrice = 249.90m,
+            WeightGrams = 250,
+            LengthCm = 20,
+            WidthCm = 18,
+            HeightCm = 8,
+            WarrantyMonths = 3,
+            FreeShipping = true,
+            Attributes = [new(" Cor ", " Preto "), new("", " ")],
+        });
+
+        Assert.Equal(("eletronicos", "Sony", "WH-1000", ProductCondition.Used), (product.Category, product.Brand, product.Sku, product.Condition));
+        Assert.Equal(["https://cdn.example.com/a.webp", "http://cdn.example.com/b.png"], product.ImageUrls);
+        Assert.Equal((249.90m, 250, 20, 18, 8, 3, true),
+            (product.OriginalPrice, product.WeightGrams, product.LengthCm, product.WidthCm, product.HeightCm, product.WarrantyMonths, product.FreeShipping));
+        Assert.Equal(new ProductAttribute("Cor", "Preto"), Assert.Single(product.Attributes));
+    }
+
+    [Fact]
+    public void Unknown_category_is_invalid() =>
+        AssertInvalid("category", () => CreateWith(new ProductDetails { Category = "armas" }));
+
+    [Fact]
+    public void Unknown_condition_is_invalid() =>
+        AssertInvalid("condition", () => CreateWith(new ProductDetails { Condition = (ProductCondition)42 }));
+
+    [Theory]
+    [InlineData("ftp://cdn.example.com/a.png")]
+    [InlineData("/imagens/a.png")]
+    [InlineData("javascript:alert(1)")]
+    public void Image_must_be_an_absolute_http_url(string url) =>
+        AssertInvalid("imageUrls", () => CreateWith(new ProductDetails { ImageUrls = [url] }));
+
+    [Fact]
+    public void More_than_8_images_is_invalid() =>
+        AssertInvalid("imageUrls", () => CreateWith(new ProductDetails
+        {
+            ImageUrls = Enumerable.Range(1, 9).Select(i => $"https://cdn.example.com/{i}.webp").ToList(),
+        }));
+
+    [Theory]
+    [InlineData(199.90)]
+    [InlineData(100)]
+    [InlineData(250.001)]
+    public void Original_price_must_be_above_the_price_with_2_decimals(double originalPrice) =>
+        AssertInvalid("originalPrice", () => CreateWith(new ProductDetails { OriginalPrice = (decimal)originalPrice }, price: 199.90m));
+
+    [Theory]
+    [InlineData("weightGrams")]
+    [InlineData("lengthCm")]
+    [InlineData("warrantyMonths")]
+    public void Out_of_range_measures_are_invalid(string field)
+    {
+        var details = field switch
+        {
+            "weightGrams" => new ProductDetails { WeightGrams = 0 },
+            "lengthCm" => new ProductDetails { LengthCm = 1001 },
+            _ => new ProductDetails { WarrantyMonths = -1 },
+        };
+
+        AssertInvalid(field, () => CreateWith(details));
+    }
+
+    [Fact]
+    public void Attribute_needs_name_and_value() =>
+        AssertInvalid("attributes", () => CreateWith(new ProductDetails { Attributes = [new("Cor", "")] }));
+
+    [Fact]
+    public void Brand_longer_than_60_chars_is_invalid() =>
+        AssertInvalid("brand", () => CreateWith(new ProductDetails { Brand = new string('a', 61) }));
+
+    [Fact]
+    public void Raising_the_price_to_the_original_price_drops_the_discount()
+    {
+        var product = CreateWith(new ProductDetails { OriginalPrice = 249.90m });
+
+        product.ChangePrice(Money.Create(249.90m), _clock);
+
+        Assert.Null(product.OriginalPrice);
+    }
+
     [Fact]
     public void Is_owned_by_its_seller_only()
     {

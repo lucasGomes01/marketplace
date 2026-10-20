@@ -123,9 +123,86 @@ public class ProductsApiTests(CatalogApiFactory factory)
         Assert.True(page.TotalCount >= 2);
     }
 
+    private sealed record DetailsBody(
+        Guid Id, string Category, string? Brand, string? Sku, string Condition, List<string> ImageUrls, decimal? OriginalPrice,
+        int? WeightGrams, int? LengthCm, int? WidthCm, int? HeightCm, int? WarrantyMonths, bool FreeShipping,
+        List<AttributeBody> Attributes);
+
+    private sealed record AttributeBody(string Name, string Value);
+
+    [Fact]
+    public async Task Listing_details_are_saved_and_returned()
+    {
+        var (seller, _) = factory.CreateSellerClient();
+        var response = await seller.PostAsJsonAsync("/products", new
+        {
+            name = "Fone sem fio",
+            price = 150m,
+            stock = 3,
+            category = "eletronicos",
+            brand = "Sony",
+            sku = "WH-1000",
+            condition = "Used",
+            imageUrls = new[] { "https://cdn.example.com/fone-1.webp", "https://cdn.example.com/fone-2.webp" },
+            originalPrice = 199.90m,
+            weightGrams = 250,
+            lengthCm = 20,
+            widthCm = 18,
+            heightCm = 8,
+            warrantyMonths = 3,
+            freeShipping = true,
+            attributes = new[] { new { name = "Conexão", value = "Bluetooth 5.3" } },
+        });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = await response.Content.ReadFromJsonAsync<DetailsBody>();
+
+        var product = await factory.CreateClient().GetFromJsonAsync<DetailsBody>($"/products/{created!.Id}");
+
+        Assert.NotNull(product);
+        Assert.Equal(("eletronicos", "Sony", "WH-1000", "Used", 199.90m), (product.Category, product.Brand, product.Sku, product.Condition, product.OriginalPrice));
+        Assert.Equal(["https://cdn.example.com/fone-1.webp", "https://cdn.example.com/fone-2.webp"], product.ImageUrls);
+        Assert.Equal((250, 20, 18, 8, 3, true), (product.WeightGrams, product.LengthCm, product.WidthCm, product.HeightCm, product.WarrantyMonths, product.FreeShipping));
+        Assert.Equal(new AttributeBody("Conexão", "Bluetooth 5.3"), Assert.Single(product.Attributes));
+    }
+
+    [Fact]
+    public async Task Invalid_listing_detail_returns_400_on_the_field()
+    {
+        var (client, _) = factory.CreateSellerClient();
+
+        var response = await client.PostAsJsonAsync("/products", new { name = "Fone", price = 10m, category = "nao-existe" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        Assert.True(problem!.Errors.ContainsKey("category"));
+    }
+
+    [Fact]
+    public async Task List_filters_searches_and_sorts_in_the_database()
+    {
+        var (seller, _) = factory.CreateSellerClient();
+        var tag = Guid.NewGuid().ToString("N")[..8];
+        async Task Publish(string name, decimal price, string category, bool freeShipping) =>
+            Assert.Equal(HttpStatusCode.Created, (await seller.PostAsJsonAsync("/products",
+                new { name = $"{name} {tag}", price, stock = 1, category, freeShipping })).StatusCode);
+        await Publish("Caixa de som", 400m, "eletronicos", false);
+        await Publish("Fone", 150m, "eletronicos", true);
+        await Publish("Fone gamer", 300m, "eletronicos", true);
+        await Publish("Furadeira", 200m, "ferramentas", true);
+
+        var page = await factory.CreateClient().GetFromJsonAsync<PageBody>(
+            $"/products?q={tag}&category=eletronicos&freeShipping=true&minPrice=100&maxPrice=350&sort=price_desc");
+
+        Assert.NotNull(page);
+        Assert.Equal([$"Fone gamer {tag}", $"Fone {tag}"], page.Items.Select(p => p.Name));
+        Assert.Equal(2, page.TotalCount);
+    }
+
     [Theory]
     [InlineData("?page=0")]
     [InlineData("?pageSize=51")]
+    [InlineData("?sort=popular")]
+    [InlineData("?category=nao-existe")]
     public async Task Invalid_paging_returns_400(string query)
     {
         var response = await factory.CreateClient().GetAsync($"/products{query}");
