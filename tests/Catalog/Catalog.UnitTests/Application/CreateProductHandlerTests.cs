@@ -79,6 +79,46 @@ public class CreateProductHandlerTests
     }
 
     [Fact]
+    public async Task Keeps_the_listing_details()
+    {
+        var result = await _handler.HandleAsync(new CreateProductCommand(SellerId, "Fone", null, 150m, null, 3)
+        {
+            Category = "eletronicos",
+            Brand = "Sony",
+            Condition = "refurbished",
+            ImageUrls = ["https://cdn.example.com/fone.webp"],
+            OriginalPrice = 199.90m,
+            FreeShipping = true,
+            WarrantyMonths = 6,
+            Attributes = [new("Conexão", "Bluetooth")],
+        });
+
+        Assert.Equal(("eletronicos", "Sony", "Refurbished", 199.90m, true, 6),
+            (result.Value.Category, result.Value.Brand, result.Value.Condition, result.Value.OriginalPrice, result.Value.FreeShipping, result.Value.WarrantyMonths));
+        Assert.Equal("Bluetooth", Assert.Single(result.Value.Attributes).Value);
+    }
+
+    [Theory]
+    [InlineData("seminovo")]
+    [InlineData("1")]
+    public async Task Unknown_condition_is_a_validation_error(string condition)
+    {
+        var result = await _handler.HandleAsync(new CreateProductCommand(SellerId, "Fone", null, 150m, null, 3) { Condition = condition });
+
+        Assert.Equal("condition", Assert.Single(result.Errors).Field);
+        Assert.Empty(_repository.Products);
+    }
+
+    [Fact]
+    public async Task Invalid_detail_is_a_validation_error_on_its_field()
+    {
+        var result = await _handler.HandleAsync(new CreateProductCommand(SellerId, "Fone", null, 150m, null, 3) { OriginalPrice = 100m });
+
+        var error = Assert.Single(result.Errors);
+        Assert.Equal(("originalPrice", "originalPrice.invalid"), (error.Field, error.Code));
+    }
+
+    [Fact]
     public async Task Invalid_currency_is_a_validation_error_on_currency()
     {
         var result = await Create(currency: "REAL");

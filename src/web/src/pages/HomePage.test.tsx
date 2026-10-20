@@ -1,9 +1,12 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { renderApp } from '../test/render'
 import { manyProducts, resetFakeProducts } from '../test/products'
 
 const cards = () => screen.getAllByRole('article')
+
+const waitForOrder = (names: string[]) =>
+  waitFor(() => expect(cards().map((card) => within(card).getByRole('heading').textContent)).toEqual(names))
 
 describe('HomePage (vitrine)', () => {
   it('lists products newest first with price and stock', async () => {
@@ -37,6 +40,52 @@ describe('HomePage (vitrine)', () => {
 
     expect(await screen.findByText('Nenhum produto à venda ainda.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Anunciar um produto' })).toHaveAttribute('href', '/vender/novo')
+  })
+
+  it('shows brand, discount, condition and free shipping on the cards', async () => {
+    renderApp('/')
+
+    await screen.findByRole('heading', { name: 'Furadeira de impacto 700W' })
+    const furadeira = cards()[2]
+    expect(within(furadeira).getByText('Bosch')).toBeInTheDocument()
+    expect(within(furadeira).getByText('-20%')).toBeInTheDocument()
+    expect(within(furadeira).getByText('Frete grátis')).toBeInTheDocument()
+    expect(within(cards()[1]).getByText('Usado')).toBeInTheDocument()
+  })
+
+  it('searches from the header and keeps the term in the address', async () => {
+    const { user } = renderApp('/')
+    await screen.findByRole('heading', { name: 'Trena a laser 40m' })
+
+    await user.type(within(screen.getByRole('search')).getByRole('searchbox', { name: 'Buscar produtos' }), 'bosch')
+    await user.click(within(screen.getByRole('search')).getByRole('button', { name: 'Buscar' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Resultados para “bosch”' })).toBeInTheDocument()
+    expect(cards().map((card) => within(card).getByRole('heading').textContent)).toEqual(['Furadeira de impacto 700W'])
+    expect(screen.getByText('1 produto')).toBeInTheDocument()
+  })
+
+  it('filters by category from the category bar and says when nothing matches', async () => {
+    const { user } = renderApp('/')
+    await screen.findByRole('heading', { name: 'Trena a laser 40m' })
+
+    await user.click(within(screen.getByRole('navigation', { name: 'Categorias' })).getByRole('link', { name: 'Eletrônicos' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Eletrônicos' })).toBeInTheDocument()
+    expect(await screen.findByText('Nenhum produto encontrado com esses filtros.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Limpar filtros' }))
+    expect(await screen.findByRole('heading', { name: 'Trena a laser 40m' })).toBeInTheDocument()
+  })
+
+  it('sorts by price and filters free shipping', async () => {
+    const { user } = renderApp('/')
+    await screen.findByRole('heading', { name: 'Trena a laser 40m' })
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Ordenar por' }), 'Menor preço')
+    await waitForOrder(['Jogo de chaves combinadas', 'Furadeira de impacto 700W', 'Trena a laser 40m'])
+
+    await user.click(screen.getByRole('checkbox', { name: 'Somente frete grátis' }))
+    await waitForOrder(['Furadeira de impacto 700W'])
   })
 
   it('paginates 12 per page', async () => {

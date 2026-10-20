@@ -2,6 +2,11 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-10-20 — T-028 Vitrine profissional
+- Catalog: produto ganha categoria, marca, SKU, condição, fotos (URL), preço "de", peso/dimensões, garantia, frete grátis e ficha técnica (migration `ProductListingDetails`). `GET /products` com busca, filtros e ordenação.
+- Web: cabeçalho com busca + barra de categorias + rodapé; vitrine com banner, categorias, filtros e ordenação; página do produto com galeria, ficha técnica e relacionados; anúncio em 5 seções com pré-visualização.
+- Rebase sobre a T-027: a migration do Catalog foi refeita depois da `AddOutbox` (só colunas/índice de `Products`).
+
 ## 2026-10-20 — T-027 Outbox (ADR-005)
 - Cart, Catalog e Orders gravam o evento em `OutboxMessages` **na mesma transação** do dado; um relay por serviço
   (lock `sp_getapplock`, conexão fora do pool) publica em lote e em ordem. `BuildingBlocks.Outbox` (.NET) e
