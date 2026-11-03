@@ -71,7 +71,7 @@ public sealed class KafkaEventConsumer<TEvent>(
         EventEnvelope<TEvent>? envelope;
         try
         {
-            envelope = JsonSerializer.Deserialize<EventEnvelope<TEvent>>(result.Message.Value, KafkaMessages.Json);
+            envelope = KafkaMessages.Deserialize<TEvent>(result.Message.Value);
         }
         catch (JsonException ex)
         {

@@ -63,3 +63,38 @@ public class KafkaMessagesTests
             message.Headers.Select(h => (h.Key, Encoding.UTF8.GetString(h.GetValueBytes()))));
     }
 }
+
+/// <summary>
+/// O Orders (Go) usa ids de evento que não são GUID (ex.: <c>orderId:sellerId:Delivered</c> no
+/// <c>shipment.status-changed</c>). O consumidor .NET precisa ler esses envelopes em vez de descartá-los.
+/// </summary>
+public class EventEnvelopeReadingTests
+{
+    private sealed record Shipment(Guid OrderId, string Status);
+
+    private static string Envelope(string eventId) =>
+        $$$"""{"eventId":"{{{eventId}}}","type":"shipment.status-changed","occurredAt":"2026-11-03T12:00:00Z","data":{"orderId":"01a13700-0000-7000-8000-0000000000aa","status":"Delivered"}}""";
+
+    [Fact]
+    public void Guid_event_id_is_read_as_is()
+    {
+        var envelope = KafkaMessages.Deserialize<Shipment>(Envelope("01a13700-0000-7000-8000-000000000001"));
+
+        Assert.Equal(Guid.Parse("01a13700-0000-7000-8000-000000000001"), envelope!.EventId);
+    }
+
+    [Fact]
+    public void Text_event_id_becomes_a_stable_guid()
+    {
+        const string id = "01a13700-0000-7000-8000-0000000000aa:01a13700-0000-7000-8000-0000000000bb:Delivered";
+
+        var first = KafkaMessages.Deserialize<Shipment>(Envelope(id))!;
+        var again = KafkaMessages.Deserialize<Shipment>(Envelope(id))!;
+        var other = KafkaMessages.Deserialize<Shipment>(Envelope(id.Replace("Delivered", "Shipped")))!;
+
+        Assert.NotEqual(Guid.Empty, first.EventId);
+        Assert.Equal(first.EventId, again.EventId);
+        Assert.NotEqual(first.EventId, other.EventId);
+        Assert.Equal("Delivered", first.Data.Status);
+    }
+}
