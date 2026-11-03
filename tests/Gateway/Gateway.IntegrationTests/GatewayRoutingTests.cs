@@ -15,7 +15,7 @@ namespace Gateway.IntegrationTests;
 /// </summary>
 public sealed class GatewayFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private static readonly string[] Clusters = ["users", "catalog", "cart", "orders"];
+    private static readonly string[] Clusters = ["users", "catalog", "cart", "orders", "payments"];
     private WebApplication? _echo;
     private string _echoUrl = string.Empty;
     private int _hits;
@@ -69,10 +69,14 @@ public class GatewayRoutingTests(GatewayFactory factory) : IClassFixture<Gateway
     [InlineData("/api/orders/o-1/shipments/s-1/delivery", "/svc-orders/orders/o-1/shipments/s-1/delivery")]
     [InlineData("/api/shipments", "/svc-orders/shipments")]
     [InlineData("/api/shipments/o-1/status", "/svc-orders/shipments/o-1/status")]
+    [InlineData("/api/payouts", "/svc-payments/payouts")]
+    [InlineData("/api/payouts/card", "/svc-payments/payouts/card")]
+    [InlineData("/api/exchange-rates/convert?amount=10&from=BRL&to=USD", "/svc-payments/exchange-rates/convert?amount=10&from=BRL&to=USD")]
     [InlineData("/health/users", "/svc-users/health")]
     [InlineData("/health/catalog", "/svc-catalog/health")]
     [InlineData("/health/cart", "/svc-cart/health")]
     [InlineData("/health/orders", "/svc-orders/health")]
+    [InlineData("/health/payments", "/svc-payments/health")]
     public async Task Routes_resource_to_the_right_service_and_path(string publicPath, string expectedUpstream)
     {
         var response = await _client.GetAsync(publicPath);

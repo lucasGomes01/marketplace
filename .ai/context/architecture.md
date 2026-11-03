@@ -2,14 +2,14 @@
 
 ```
              ┌──────────────┐
-  React ───▶ │ Gateway YARP │ :5000   (/api/users, /api/auth, /api/products, /api/cart, /api/orders, /api/shipments)
-  :5173      └──────┬───────┘
-     ┌──────────────┼───────────────┬───────────────┐
-     ▼              ▼               ▼               ▼
-  Users :5001   Catalog :5002   Cart :5003     Orders :5004 (Go)
-  UsersDb       CatalogDb       CartDb         OrdersDb         ← SQL Server (1 banco por serviço)
-                    │               │               │
-                    └──────── Kafka (um tópico por evento) ────────┘
+  React ───▶ │ Gateway YARP │ :5000   (/api/users, /api/auth, /api/products, /api/cart, /api/orders, /api/shipments,
+  :5173      └──────┬───────┘          /api/payouts, /api/exchange-rates)
+     ┌──────────────┼───────────────┬───────────────┬────────────────┐
+     ▼              ▼               ▼               ▼                ▼
+  Users :5001   Catalog :5002   Cart :5003     Orders :5004 (Go)  Payments :5005 ──▶ Mastercard (sandbox) ou simulado
+  UsersDb       CatalogDb       CartDb         OrdersDb           PaymentsDb   ← SQL Server (1 banco por serviço)
+                    │               │               │                │
+                    └──────── Kafka (um tópico por evento) ──────────┘
 ```
 
 ## Serviços
@@ -20,6 +20,7 @@
 | Catalog | .NET 10 + EF Core | Produtos e estoque | 5002 |
 | Cart | .NET 10 + EF Core | Carrinho do comprador, checkout | 5003 |
 | Orders | Go (stdlib + go-mssqldb + franz-go) | Pedidos e ciclo de vida | 5004 |
+| Payments | .NET 10 + EF Core | Repasse ao vendedor (Mastercard Send) e câmbio (Mastercard) — ADR-006 | 5005 |
 | Web | React + TS + Vite | UI | 5173 |
 
 No Docker, cada serviço escuta em `8080`; o gateway é exposto em `localhost:5000`.
@@ -78,6 +79,13 @@ internal/messaging/       consumer Kafka e transporte do relay (franz-go)
 3. O Catalog consome `order.placed` → baixa o estoque (tudo ou nada, na mesma transação da `StockReservation` e do
    evento de resultado; `rowversion` em `Products` resolve a disputa pela última unidade) → `stock.reserved` ou `stock.rejected`.
 4. O Orders consome → `Confirmed` ou `Rejected`.
+
+## Repasse ao vendedor (T-029, ADR-006)
+1. O Payments também consome `cart.checked-out` → um `Payout(AwaitingDelivery)` por vendedor: bruto, taxa (10%) e líquido.
+2. `stock.rejected` → `Canceled`. `shipment.status-changed` com `Delivered` ("Recebi") → `Scheduled` (após a carência)
+   ou `AwaitingCard` se o vendedor não cadastrou o cartão Mastercard (`PUT /api/payouts/card`, número cifrado).
+3. Um despachante em segundo plano envia os vencidos pelo Mastercard Send (ou simulador) → `Sent` ou `Failed`.
+   Referência fixa por repasse: reenviar não paga duas vezes.
 
 ## Envio (T-023/T-024)
 Cada pedido tem **um envio por vendedor** (`OrderShipments`). Pedido `Confirmed` → o vendedor avança o dele em

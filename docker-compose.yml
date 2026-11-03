@@ -117,6 +117,24 @@ services:
       ConnectionStrings__Default: Server=sqlserver;Database=CartDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
       Services__Catalog: http://catalog:8080
 
+  payments:
+    <<: *dotnet-service
+    build: { context: ., dockerfile: Dockerfile.dotnet, args: { PROJECT: src/services/Payments/Payments.Api, ASSEMBLY: Payments.Api } }
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__Default: Server=sqlserver;Database=PaymentsDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      Payments__CardEncryptionKey: ${PAYMENTS_CARD_ENCRYPTION_KEY}
+      # Simulated (padrão) ou Mastercard (sandbox): ver .ai/decisions/ADR-006-mastercard.md
+      Payments__Provider: ${PAYMENTS_PROVIDER:-Simulated}
+      Mastercard__ConsumerKey: ${MASTERCARD_CONSUMER_KEY:-}
+      Mastercard__SigningKeyPath: ${MASTERCARD_SIGNING_KEY_PATH:-}
+      Mastercard__SigningKeyPassword: ${MASTERCARD_SIGNING_KEY_PASSWORD:-}
+      Mastercard__PartnerId: ${MASTERCARD_PARTNER_ID:-}
+      Payouts__HoldDays: ${PAYOUTS_HOLD_DAYS:-0}
+    volumes:
+      # Chave .p12/.pem do portal da Mastercard (só com Payments__Provider=Mastercard). Pasta fora do git.
+      - ./secrets:/secrets:ro
+
   orders:
     profiles: [apps]
     build: ./src/services/Orders
@@ -140,8 +158,9 @@ services:
       ReverseProxy__Clusters__catalog__Destinations__d1__Address: http://catalog:8080/
       ReverseProxy__Clusters__cart__Destinations__d1__Address: http://cart:8080/
       ReverseProxy__Clusters__orders__Destinations__d1__Address: http://orders:8080/
+      ReverseProxy__Clusters__payments__Destinations__d1__Address: http://payments:8080/
     ports: ["5000:8080"]
-    depends_on: [users, catalog, cart, orders]
+    depends_on: [users, catalog, cart, orders, payments]
 
 volumes:
   sqlserver-data:

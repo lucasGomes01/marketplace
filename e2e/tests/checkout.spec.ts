@@ -26,7 +26,7 @@ async function login(page: Page, email: string) {
   await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible()
 }
 
-test('caminho feliz: vender, comprar, despachar e receber', async ({ page }) => {
+test('caminho feliz: vender, comprar, despachar, receber e repassar ao vendedor', async ({ page }) => {
   const sellerEmail = `vendedora-${run}@e2e.test`
   const buyerEmail = `comprador-${run}@e2e.test`
   const productName = `Furadeira E2E ${run}`
@@ -47,6 +47,9 @@ test('caminho feliz: vender, comprar, despachar e receber', async ({ page }) => 
   await register(page, 'Comprador E2E', buyerEmail)
   await page.goto(productUrl)
   await expect(page.getByRole('heading', { name: productName })).toBeVisible()
+  // Preço em outra moeda pela cotação (Mastercard ou simulada no compose).
+  await page.getByLabel('Ver em outra moeda').selectOption('USD')
+  await expect(page.getByText(/≈\s*US\$/)).toBeVisible()
   await page.getByRole('button', { name: 'Adicionar ao carrinho' }).click()
   await page.getByRole('link', { name: 'Carrinho (1)' }).click()
   await page.getByRole('button', { name: `Aumentar quantidade de ${productName}` }).click()
@@ -73,8 +76,21 @@ test('caminho feliz: vender, comprar, despachar e receber', async ({ page }) => 
   }).toPass({ timeout: 20_000 })
   await logout(page)
 
-  // Vendedora despacha: separado → embalado → enviado.
+  // Vendedora cadastra o cartão Mastercard de recebimento e despacha: separado → embalado → enviado.
   await login(page, sellerEmail)
+  await page.getByRole('link', { name: 'Repasses' }).click()
+  // A venda chega ao Payments pelo Kafka (cart.checked-out): recarrega até aparecer.
+  await expect(async () => {
+    await page.goto('/vender/repasses')
+    await expect(page.getByRole('article').filter({ hasText: 'Aguardando entrega' })).toContainText(/R\$\s359,82/, {
+      timeout: 1_000,
+    }) // 399,80 − 10% de taxa
+  }).toPass({ timeout: 30_000 })
+  await page.getByLabel('Número do cartão Mastercard').fill('5555555555554444')
+  await page.getByLabel('Validade').fill('12/30')
+  await page.getByLabel('Nome impresso no cartão').fill('Vendedora E2E')
+  await page.getByRole('button', { name: 'Salvar cartão' }).click()
+  await expect(page.getByText('Mastercard •••• 4444')).toBeVisible()
   await page.getByRole('link', { name: 'Despachar' }).click()
   const toShip = page.getByRole('region', { name: 'A despachar' }).getByRole('article').filter({ hasText: productName })
   await expect(toShip).toContainText('Aguardando separação')
@@ -98,4 +114,15 @@ test('caminho feliz: vender, comprar, despachar e receber', async ({ page }) => 
   // Em "Meus pedidos" a entrega aparece concluída.
   await page.getByRole('link', { name: 'Pedidos', exact: true }).click()
   await expect(page.getByRole('listitem').filter({ hasText: productName })).toContainText('Entrega: Entregue')
+
+  await logout(page)
+
+  // Com a entrega confirmada, o repasse é pago no cartão da vendedora (Mastercard Send; simulado no compose).
+  await login(page, sellerEmail)
+  await expect(async () => {
+    await page.goto('/vender/repasses')
+    await expect(page.getByRole('article').filter({ hasText: 'Pago no seu cartão' })).toContainText(/R\$\s359,82/, {
+      timeout: 1_000,
+    })
+  }).toPass({ timeout: 30_000 })
 })

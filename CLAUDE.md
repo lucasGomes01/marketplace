@@ -18,11 +18,11 @@ Antes de qualquer tarefa, leia `.ai/README.md` e siga o protocolo de trabalho de
 - Infra: `docker compose up -d` · tudo: `docker compose --profile apps up -d --build`
 
 ## Limpeza do Docker
-- Containers que **devem** existir: os 10 do compose (`marketplace-*`); `kafka-init` fica `Exited (0)` — é normal (só cria os tópicos).
+- Containers que **devem** existir: os 11 do compose (`marketplace-*`); `kafka-init` fica `Exited (0)` — é normal (só cria os tópicos).
 - Testes de integração criam containers temporários (Testcontainers). Se a execução é interrompida (Docker cai, Ctrl+C),
   sobram containers com nome aleatório. Limpar: `docker container prune -f --filter label=org.testcontainers=true`
   e depois `docker volume prune -f` (volumes anônimos sem container).
 - Teste de carga travado: `docker stop k6-<cenário>`.
 
 ## Portas locais
-Gateway 5000 · Users 5001 · Catalog 5002 · Cart 5003 · Orders 5004 · Web 5173 · Kafka 9092 (localhost) · Kafka UI 8080 · Grafana 3000 · Prometheus 9090 · OTLP 4317/4318
+Gateway 5000 · Users 5001 · Catalog 5002 · Cart 5003 · Orders 5004 · Payments 5005 · Web 5173 · Kafka 9092 (localhost) · Kafka UI 8080 · Grafana 3000 · Prometheus 9090 · OTLP 4317/4318

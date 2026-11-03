@@ -1127,3 +1127,107 @@ a {
 .timeline__time {
   font-size: 0.85rem;
 }
+
+/* Repasses ao vendedor e conversão de moeda (T-029, T-030) */
+.payouts h1 {
+  margin-bottom: 16px;
+}
+
+.payouts > .alert {
+  margin-bottom: 16px;
+}
+
+.payouts__card {
+  max-width: none;
+  margin: 0 0 20px;
+}
+
+.payouts__card h2,
+.payouts__group h2 {
+  font-size: 1.15rem;
+  margin: 0 0 12px;
+}
+
+.payouts__card-current {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.payouts__card-current p {
+  margin: 0;
+}
+
+.payouts__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.payouts__summary {
+  margin-bottom: 20px;
+}
+
+.payouts__totals dd {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.payout__amounts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.payout__amounts dt {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.payout__amounts dd {
+  margin: 0;
+}
+
+.badge--payout-awaitingdelivery,
+.badge--payout-awaitingcard {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.badge--payout-scheduled {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.badge--payout-sent {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.badge--payout-failed,
+.badge--payout-canceled {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.converter {
+  display: grid;
+  grid-template-columns: auto minmax(0, 140px);
+  align-items: center;
+  gap: 6px 10px;
+  margin: 4px 0 12px;
+}
+
+.converter__label {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.converter__result {
+  grid-column: 1 / -1;
+  margin: 0;
+  min-height: 1.4em;
+}

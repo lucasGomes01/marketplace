@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from 'react-router'
 import { ApiError } from '../api/client'
 import { productsApi, stockLabel, type Product } from '../api/products'
 import { AddToCartButton } from '../components/AddToCartButton'
+import { PriceConverter } from '../components/PriceConverter'
 import { formatPrice } from '../utils/money'
 
 type Load = { status: 'loading' } | { status: 'not-found' } | { status: 'error' } | { status: 'ready'; product: Product }
@@ -67,6 +68,7 @@ export function ProductPage() {
         <div className="product-detail__info">
           <h1>{product.name}</h1>
           <p className="product-detail__price">{formatPrice(product.price, product.currency)}</p>
+          <PriceConverter amount={product.price} currency={product.currency} />
           <p className={`product-card__stock${product.stock <= 3 ? ' product-card__stock--low' : ''}`}>
             {stockLabel(product.stock)}
           </p>

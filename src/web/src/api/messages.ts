@@ -33,6 +33,17 @@ const tables = {
     ['quantity', /between 1 and (\d+)/i, (m) => `A quantidade máxima por produto é ${m[1]}.`],
     ['productId', /own product/i, 'Este produto é seu.'],
   ],
+  payoutCard: [
+    ['cardNumber', /mastercard/i, 'Só aceitamos cartões Mastercard para receber.'],
+    ['cardNumber', /required/i, 'Informe o número do cartão.'],
+    ['cardNumber', /16 digits/i, 'O cartão precisa ter 16 dígitos.'],
+    ['cardNumber', /not valid/i, 'Número de cartão inválido. Confira os dígitos.'],
+    ['expiry', /expired/i, 'Este cartão está vencido.'],
+    ['expiry', /required/i, 'Informe a validade (MM/AA).'],
+    ['expiry', /./, 'Validade inválida.'],
+    ['holderName', /required/i, 'Informe o nome impresso no cartão.'],
+    ['holderName', /at most (\d+)/i, (m) => `O nome pode ter no máximo ${m[1]} caracteres.`],
+  ],
 } satisfies Record<string, Translation[]>
 
 export type MessageContext = keyof typeof tables

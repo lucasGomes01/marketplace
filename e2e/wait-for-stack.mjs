@@ -1,6 +1,6 @@
 // Espera o backend do compose responder pelo gateway antes dos testes E2E (até 5 min).
 const gateway = process.env.GATEWAY_URL ?? 'http://localhost:5000'
-const services = ['users', 'catalog', 'cart', 'orders']
+const services = ['users', 'catalog', 'cart', 'orders', 'payments']
 const deadline = Date.now() + 5 * 60_000
 
 for (const service of services) {

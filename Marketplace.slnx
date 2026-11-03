@@ -24,6 +24,12 @@
     <Project Path="src/services/Catalog/Catalog.Domain/Catalog.Domain.csproj" />
     <Project Path="src/services/Catalog/Catalog.Infrastructure/Catalog.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/services/Payments/">
+    <Project Path="src/services/Payments/Payments.Api/Payments.Api.csproj" />
+    <Project Path="src/services/Payments/Payments.Application/Payments.Application.csproj" />
+    <Project Path="src/services/Payments/Payments.Domain/Payments.Domain.csproj" />
+    <Project Path="src/services/Payments/Payments.Infrastructure/Payments.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/src/services/Users/">
     <Project Path="src/services/Users/Users.Api/Users.Api.csproj" />
     <Project Path="src/services/Users/Users.Application/Users.Application.csproj" />
@@ -46,6 +52,10 @@
   </Folder>
   <Folder Name="/tests/Gateway/">
     <Project Path="tests/Gateway/Gateway.IntegrationTests/Gateway.IntegrationTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Payments/">
+    <Project Path="tests/Payments/Payments.IntegrationTests/Payments.IntegrationTests.csproj" />
+    <Project Path="tests/Payments/Payments.UnitTests/Payments.UnitTests.csproj" />
   </Folder>
   <Folder Name="/tests/Users/">
     <Project Path="tests/Users/Users.IntegrationTests/Users.IntegrationTests.csproj" />

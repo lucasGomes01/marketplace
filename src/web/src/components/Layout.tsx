@@ -29,9 +29,14 @@ export function Layout() {
                   Vender
                 </NavLink>
                 {isSeller(state.user) ? (
-                  <NavLink to="/vender/envios" className="site-nav__link">
-                    Despachar
-                  </NavLink>
+                  <>
+                    <NavLink to="/vender/envios" className="site-nav__link">
+                      Despachar
+                    </NavLink>
+                    <NavLink to="/vender/repasses" className="site-nav__link">
+                      Repasses
+                    </NavLink>
+                  </>
                 ) : null}
                 <NavLink to="/pedidos" className="site-nav__link">
                   Pedidos

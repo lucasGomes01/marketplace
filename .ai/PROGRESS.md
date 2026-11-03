@@ -2,6 +2,18 @@
 
 > Mais recente no topo. Cada entrada: data, tarefa, o que foi feito, pendências/alertas.
 
+## 2026-11-03 — T-029 Repasse pelo Mastercard Send · T-030 Câmbio Mastercard (ADR-006)
+- Serviço novo **Payments** (.NET, :5005, `PaymentsDb`): no checkout registra o repasse de cada vendedor (bruto − 10%);
+  no "Recebi" paga o líquido no cartão Mastercard dele (despachante a cada 5 s). Pedido recusado → cancelado.
+  Cartão só Mastercard (BIN + Luhn), cifrado com AES-256-GCM. `GET /api/exchange-rates/convert` com cache de 60 min.
+- Provedor `Simulated` por padrão; `Payments:Provider=Mastercard` liga o sandbox (OAuth 1.0a próprio, sem SDK). Não havia
+  credenciais nem acesso ao portal: **campos do Disbursements a conferir** com credenciais (I-18).
+- Telas: **Repasses** (`/vender/repasses`) e "Ver em outra moeda" no produto. E2E estendido até o repasse pago.
+- **Bug corrigido** (achado pelo E2E): o `eventId` do `shipment.status-changed` (Go) é texto e o consumidor .NET
+  descartava o evento como JSON inválido. `EventIdConverter` transforma id em texto num GUID estável.
+- Alerta: nesta sessão o `docker compose build` não baixava pacotes (proxy); E2E validado com os serviços rodando na
+  máquina e só SQL Server + Kafka no Docker. O job `docker`/`e2e` do CI confirma as imagens.
+
 ## 2026-10-20 — T-027 Outbox (ADR-005)
 - Cart, Catalog e Orders gravam o evento em `OutboxMessages` **na mesma transação** do dado; um relay por serviço
   (lock `sp_getapplock`, conexão fora do pool) publica em lote e em ordem. `BuildingBlocks.Outbox` (.NET) e
