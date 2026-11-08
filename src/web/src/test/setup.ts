@@ -4,6 +4,7 @@ import { afterAll, afterEach, beforeAll } from 'vitest'
 import { orderPolling } from '../api/orders'
 import { resetFakeCarts } from './cart'
 import { resetFakeOrders } from './orders'
+import { resetFakePayments } from './payments'
 import { resetFakeProducts } from './products'
 import { resetFakeApi, server } from './server'
 
@@ -25,6 +26,7 @@ afterEach(() => {
   resetFakeProducts()
   resetFakeCarts()
   resetFakeOrders()
+  resetFakePayments()
   Object.assign(orderPolling, testPolling)
   localStorage.clear()
 })

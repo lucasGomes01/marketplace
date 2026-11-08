@@ -11,6 +11,7 @@ import { NewProductPage } from './pages/NewProductPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { OrderPage } from './pages/OrderPage'
 import { OrdersPage } from './pages/OrdersPage'
+import { PayoutsPage } from './pages/PayoutsPage'
 import { ProductPage } from './pages/ProductPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { ShipmentsPage } from './pages/ShipmentsPage'
@@ -31,6 +32,7 @@ export function AppRoutes() {
           <Route path="pedidos/:id" element={<OrderPage />} />
           <Route path="vender/novo" element={<NewProductPage />} />
           <Route path="vender/envios" element={<ShipmentsPage />} />
+          <Route path="vender/repasses" element={<PayoutsPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>

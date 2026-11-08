@@ -3,6 +3,7 @@ import { setupServer } from 'msw/node'
 import type { Role } from '../api/users'
 import { cartHandlers } from './cart'
 import { orderHandlers } from './orders'
+import { paymentHandlers } from './payments'
 import { productHandlers } from './products'
 import { buyerToken, buyerUserId, sellerUserId, validToken } from './tokens'
 
@@ -106,4 +107,4 @@ export const handlers = [
   }),
 ]
 
-export const server = setupServer(...handlers, ...productHandlers, ...cartHandlers, ...orderHandlers)
+export const server = setupServer(...handlers, ...productHandlers, ...cartHandlers, ...orderHandlers, ...paymentHandlers)

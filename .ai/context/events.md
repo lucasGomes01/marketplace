@@ -21,18 +21,18 @@ Decisão e porquês em `decisions/ADR-003-kafka.md`.
   `OutboxMessages` do próprio banco, na mesma transação da mudança; o relay publica em ordem de gravação e marca
   `PublishedAt`. Um `eventId` só é registrado uma vez. Consequência: o evento pode sair alguns ms depois do commit
   (ou bem depois, se o Kafka estiver fora), mas nunca se perde nem sai sem a mudança ter sido gravada.
-- **Consumer group = nome do serviço**: `orders-service`, `catalog-service`, `cart-service`.
+- **Consumer group = nome do serviço**: `orders-service`, `catalog-service`, `cart-service`, `payments-service`.
 - Mudar contrato: só adicionar campos opcionais (compatível para trás) ou criar um evento/tópico `...-v2`.
 
 ## Tópicos
 
 | Tópico | Produtor | Consumidores (group) | Chave |
 |---|---|---|---|
-| `cart.checked-out` | Cart | `orders-service` | `cartId` |
+| `cart.checked-out` | Cart | `orders-service`, `payments-service` | `cartId` |
 | `order.placed` | Orders | `catalog-service` | `orderId` |
 | `stock.reserved` | Catalog | `orders-service` | `orderId` |
-| `stock.rejected` | Catalog | `orders-service` | `orderId` |
-| `shipment.status-changed` | Orders | — (ainda sem consumidor) | `orderId` |
+| `stock.rejected` | Catalog | `orders-service`, `payments-service` | `orderId` |
+| `shipment.status-changed` | Orders | `payments-service` | `orderId` |
 
 ## cart.checked-out (Cart → Orders)
 Registrado por `POST /api/cart/checkout` (T-010) na mesma transação que esvazia o carrinho (outbox, T-027).
@@ -43,6 +43,9 @@ Registrado por `POST /api/cart/checkout` (T-010) na mesma transação que esvazi
   "items": [ { "productId": "guid", "sellerId": "guid", "productName": "string",
                "unitPrice": 10.50, "currency": "BRL", "quantity": 2 } ] }
 ```
+
+O **Payments** (T-029) também consome: cria um repasse por vendedor (bruto dos itens dele, taxa e líquido), idempotente
+por pedido + vendedor.
 
 ## order.placed (Orders → Catalog)
 Publicado pelo Orders ao criar o pedido (T-011); `eventId` = id do pedido. O Catalog reserva o estoque (T-012).
@@ -61,14 +64,16 @@ Estoque de **todos** os itens baixado. `eventId` = `orderId` (um resultado por p
 Tudo ou nada: se algum item não tem estoque (ou o produto não existe mais), nada é baixado. `reason` é legível
 (ex.: "Estoque insuficiente: Furadeira (pedido 3, disponível 2)") e vira o motivo do pedido `Rejected`.
 Pedido repetido → o Catalog não faz nada: a reserva (`StockReservations`) e o resultado já foram gravados juntos.
+O **Payments** (T-029) cancela os repasses do pedido que ainda aguardavam entrega.
 ```json
 { "orderId": "guid", "reason": "string", "productIds": ["guid"] }
 ```
 
-## shipment.status-changed (Orders → ainda sem consumidor)
+## shipment.status-changed (Orders → Payments)
 Publicado a cada etapa do envio de um vendedor (T-024): `Picked`, `Packed`, `Shipped` (pelo vendedor) e `Delivered`
 (o comprador confirma). `eventId` = `orderId:sellerId:status` (determinístico). Gravado no outbox junto com o envio;
-repetir a requisição com o mesmo status não grava nem publica de novo. `changedAt` = quando a etapa aconteceu. Futuro: painel do vendedor (I-03), notificações.
+repetir a requisição com o mesmo status não grava nem publica de novo. `changedAt` = quando a etapa aconteceu. O Payments (T-029) usa só `Delivered`: libera o repasse daquele vendedor
+(carência contada a partir de `changedAt`). Futuro: painel do vendedor (I-03), notificações.
 ```json
 { "orderId": "guid", "buyerId": "guid", "sellerId": "guid", "status": "Shipped", "changedAt": "2026-10-19T12:00:00Z" }
 ```

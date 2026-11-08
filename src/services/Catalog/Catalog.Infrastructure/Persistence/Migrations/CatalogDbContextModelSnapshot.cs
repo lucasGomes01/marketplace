@@ -85,6 +85,28 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Attributes")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Brand")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasDefaultValue("outros");
+
+                    b.Property<string>("Condition")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("New");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -92,13 +114,34 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<bool>("FreeShipping")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("HeightCm")
+                        .HasColumnType("int");
+
+                    b.PrimitiveCollection<string>("ImageUrls")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("LengthCm")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
 
+                    b.Property<decimal?>("OriginalPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<Guid>("SellerId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Sku")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
 
                     b.Property<int>("Stock")
                         .HasColumnType("int");
@@ -110,6 +153,15 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<int?>("WarrantyMonths")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("WeightGrams")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("WidthCm")
+                        .HasColumnType("int");
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Price", "Catalog.Domain.Product.Price#Money", b1 =>
                         {
@@ -129,6 +181,8 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         });
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Category");
 
                     b.HasIndex("CreatedAt");
 

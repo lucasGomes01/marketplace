@@ -81,6 +81,19 @@ O vendedor avança até `Shipped`; o **comprador** confirma `Delivered` ("Recebi
 |---|---|---|---|---|
 | T-027 | Outbox: evento gravado na mesma transação do dado + relay para o Kafka (Cart, Catalog, Orders), métricas e ADR-005 | Cart + Catalog + Orders + Infra | T-026 | done |
 
+## Fase 9 — Vitrine (pedida em 2026-10-20)
+| ID | Tarefa | Serviço | Depende | Status |
+|---|---|---|---|---|
+| T-028 | Vitrine profissional: busca, categorias, filtros, página de produto completa e anúncio com marca, condição, fotos (URL), ficha técnica, preço "de", medidas, garantia e frete grátis | Catalog + Web | T-027 | done |
+
+## Fase 10 — Mastercard: repasse ao vendedor e câmbio (decidida em 2026-11-03)
+Sem intermediador de pagamento: só APIs da Mastercard (sandbox), com adaptador simulado por padrão — ADR-006.
+
+| ID | Tarefa | Serviço | Depende | Status |
+|---|---|---|---|---|
+| T-029 | Serviço Payments: repasse ao vendedor pelo Mastercard Send após o "Recebi" (taxa, cartão cifrado, despachante), tela Repasses | Payments + Gateway + Web + Infra | T-027 | done |
+| T-030 | Preço em outra moeda com a cotação da Mastercard (Currency Conversion) na página do produto | Payments + Web | T-029 | done |
+
 ## Ideias (pós-MVP)
 | ID | Ideia | Status |
 |---|---|---|
@@ -98,4 +111,7 @@ O vendedor avança até `Shipped`; o **comprador** confirma `Delivered` ("Recebi
 | I-13 | Imagens de produto: MinIO no compose (API S3; em produção S3 privado + CloudFront com OAC), upload direto do browser via presigned URL gerada pelo Catalog, `ImageKey` no `Product` (só a referência, nunca o binário), chaves imutáveis (`products/{id}/{hash}.webp`) com `Cache-Control: public, max-age=31536000, immutable`, thumbnails para a listagem e exibição no web. Imagem **não** passa pelo Gateway | idea |
 | I-14 | Cancelamento do pedido/envio antes de `Shipped`, devolvendo o estoque no Catalog (evento) | idea |
 | I-15 | Código de rastreio da transportadora no envio `Shipped` | idea |
+| I-16 | Payments publicar `payout.sent` / `payout.failed` (outbox) para notificações e painel do vendedor | idea |
+| I-17 | Despachante de repasses com lock (`sp_getapplock`, como o relay do outbox) para rodar várias réplicas do Payments | idea |
+| I-18 | Ligar o Payments no sandbox real da Mastercard (conta no developer.mastercard.com, chave .p12, Partner ID) e conferir os campos do Disbursements | idea |
 | I-09 | Erros com **códigos** para o front traduzir sem regex. Já existem no `Result` (T-018) e saem em 401/404/409; falta expô-los no 400 de validação e usar no front | idea |

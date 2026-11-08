@@ -18,6 +18,7 @@ flowchart LR
         catalog["Catalog · .NET<br/>produtos, estoque"]
         cart["Cart · .NET<br/>carrinho, checkout"]
         orders["Orders · Go<br/>pedidos e status"]
+        payments["Payments · .NET<br/>repasses e câmbio"]
     end
 
     subgraph sql [SQL Server · um banco por serviço]
@@ -25,23 +26,28 @@ flowchart LR
         catalogdb[(CatalogDb)]
         cartdb[(CartDb)]
         ordersdb[(OrdersDb)]
+        paymentsdb[(PaymentsDb)]
     end
 
-    kafka{{"Kafka 4.1 (KRaft) · Kafka UI :8080<br/>cart.checked-out · order.placed<br/>stock.reserved · stock.rejected"}}
+    kafka{{"Kafka 4.1 (KRaft) · Kafka UI :8080<br/>cart.checked-out · order.placed<br/>stock.reserved · stock.rejected<br/>shipment.status-changed"}}
+    mastercard["Mastercard (sandbox)<br/>Send · Currency Conversion<br/>ou simulado"]
     obs[("Grafana · :3000<br/>Prometheus · Tempo · Loki")]
 
     web -- "/api/* + JWT" --> gw
-    gw --> users & catalog & cart & orders
+    gw --> users & catalog & cart & orders & payments
     cart -- "HTTP: preço/estoque" --> catalog
 
     users --> usersdb
     catalog --> catalogdb
     cart --> cartdb
     orders --> ordersdb
+    payments --> paymentsdb
+    payments -- "HTTPS + OAuth 1.0a" --> mastercard
 
     cart -. publica .-> kafka
     kafka -. consome/publica .- orders
     kafka -. consome/publica .- catalog
+    kafka -. consome .- payments
     servicos -. "traces, métricas, logs (OTLP)" .-> obs
 ```
 
@@ -57,6 +63,7 @@ necessária na hora) ou por evento. Detalhes em [`.ai/context/architecture.md`](
 | Catalog | .NET 10 + EF Core | Produtos, preço, estoque; reserva o estoque dos pedidos | `/api/products` | 5002 |
 | Cart | .NET 10 + EF Core | Carrinho por pessoa; checkout publica o evento do pedido | `/api/cart` | 5003 |
 | Orders | Go 1.26 (stdlib) | Cria pedidos a partir do checkout e mantém o status | `/api/orders` | 5004 |
+| Payments | .NET 10 + EF Core | Repasse ao vendedor pelo Mastercard Send e câmbio da Mastercard (simulados sem credenciais) | `/api/payouts` · `/api/exchange-rates` | 5005 |
 | Web | React 19 + TS + Vite | Vitrine, produto, carrinho, pedidos, conta, vender | — | 5173 |
 
 ### Fluxo de uma compra
@@ -101,10 +108,11 @@ no `docker-compose.yml`. Contratos em [`.ai/context/events.md`](.ai/context/even
 
 | Tópico | Produtor | Consumidor (grupo) | Chave | Conteúdo |
 |---|---|---|---|---|
-| `cart.checked-out` | Cart | `orders-service` | `cartId` | Itens com preço congelado no checkout |
+| `cart.checked-out` | Cart | `orders-service`, `payments-service` | `cartId` | Itens com preço congelado no checkout |
 | `order.placed` | Orders | `catalog-service` | `orderId` | Produtos e quantidades a reservar |
 | `stock.reserved` | Catalog | `orders-service` | `orderId` | Estoque baixado para todos os itens |
-| `stock.rejected` | Catalog | `orders-service` | `orderId` | Motivo legível e produtos sem estoque |
+| `stock.rejected` | Catalog | `orders-service`, `payments-service` | `orderId` | Motivo legível e produtos sem estoque |
+| `shipment.status-changed` | Orders | `payments-service` | `orderId` | Etapa do envio de um vendedor; `Delivered` libera o repasse |
 
 ### Garantias
 

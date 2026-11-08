@@ -22,6 +22,35 @@ describe('ProductPage', () => {
     expect(screen.getByText('Últimas 2 unidades')).toBeInTheDocument()
   })
 
+  it('shows the listing details: discount, shipping, warranty, specs and the category path', async () => {
+    renderApp(`/produtos/${drill.id}`)
+
+    expect(await screen.findByRole('heading', { level: 1, name: drill.name })).toBeInTheDocument()
+    expect(screen.getByText('20% OFF')).toBeInTheDocument()
+    expect(screen.getByText('Frete grátis', { selector: '.perks strong' })).toBeInTheDocument()
+    expect(screen.getByText('Garantia de 12 meses do vendedor')).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Você está em' })).getByRole('link', { name: 'Ferramentas' })).toHaveAttribute(
+      'href',
+      '/?categoria=ferramentas',
+    )
+
+    const specs = within(screen.getByRole('table'))
+    expect(specs.getByRole('rowheader', { name: 'Marca' }).nextSibling).toHaveTextContent('Bosch')
+    expect(specs.getByRole('rowheader', { name: 'Voltagem' }).nextSibling).toHaveTextContent('220V')
+    expect(specs.getByRole('rowheader', { name: 'Dimensões da embalagem' }).nextSibling).toHaveTextContent('30 × 25 × 10 cm')
+    expect(specs.getByRole('rowheader', { name: 'Peso' }).nextSibling).toHaveTextContent('1,8 kg')
+  })
+
+  it('suggests other products of the same category', async () => {
+    renderApp(`/produtos/${drill.id}`)
+
+    const related = await screen.findByRole('region', { name: 'Você também pode gostar' })
+    expect(within(related).getAllByRole('article').map((card) => within(card).getByRole('heading').textContent)).toEqual([
+      'Trena a laser 40m',
+      'Jogo de chaves combinadas',
+    ])
+  })
+
   it('tells when the product does not exist', async () => {
     renderApp('/produtos/nao-existe')
 
