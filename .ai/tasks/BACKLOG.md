@@ -81,6 +81,11 @@ O vendedor avança até `Shipped`; o **comprador** confirma `Delivered` ("Recebi
 |---|---|---|---|---|
 | T-027 | Outbox: evento gravado na mesma transação do dado + relay para o Kafka (Cart, Catalog, Orders), métricas e ADR-005 | Cart + Catalog + Orders + Infra | T-026 | done |
 
+## Fase 9 — Vitrine (pedida em 2026-10-20)
+| ID | Tarefa | Serviço | Depende | Status |
+|---|---|---|---|---|
+| T-028 | Vitrine profissional: busca, categorias, filtros, página de produto completa e anúncio com marca, condição, fotos (URL), ficha técnica, preço "de", medidas, garantia e frete grátis | Catalog + Web | T-027 | done |
+
 ## Ideias (pós-MVP)
 | ID | Ideia | Status |
 |---|---|---|
